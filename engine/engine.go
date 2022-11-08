@@ -22,15 +22,19 @@ type Authorizer interface {
 	FilterAuthorizedPairs(ctx context.Context, subjects Subjects, pairs Pairs) (Pairs, error)
 
 	FilterAuthorizedProjects(ctx context.Context, subjects Subjects) (Projects, error)
+
+	IsProjectAuthorized(ctx context.Context, subject Subject, action Action, resource Resource, project Project) (bool, error)
+	IsAuthorized(ctx context.Context, subject Subject, action Action, resource Resource) (bool, error)
 }
 
 type Writer interface {
 	SetPolicies(ctx context.Context, policyMap map[string]interface{}, roleMap map[string]interface{}) error
 }
 
-type Subjects []string
+type Subject string
+type Subjects []Subject
 
-func MakeSubjects(subs ...string) Subjects {
+func MakeSubjects(subs ...Subject) Subjects {
 	return subs
 }
 

@@ -216,7 +216,6 @@ func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects
 }
 
 func (s *State) FilterAuthorizedPairs(ctx context.Context, subjects engine.Subjects, pairs engine.Pairs) (engine.Pairs, error) {
-
 	opaInput := map[string]interface{}{
 		"subjects": subjects,
 		"pairs":    pairs,
@@ -231,7 +230,6 @@ func (s *State) FilterAuthorizedPairs(ctx context.Context, subjects engine.Subje
 }
 
 func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Subjects) (engine.Projects, error) {
-
 	opaInput := map[string]interface{}{
 		"subjects": subjects,
 	}
@@ -244,8 +242,35 @@ func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Su
 	return s.projectsFromPartialResults(rs)
 }
 
-func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}, store storage.Store) (rego.ResultSet, error) {
+func (s *State) IsProjectAuthorized(ctx context.Context, subject engine.Subject, action engine.Action, resource engine.Resource, project engine.Project) (bool, error) {
+	input := ast.NewObject(
+		[2]*ast.Term{ast.NewTerm(ast.String("subjects")), ast.ArrayTerm(ast.NewTerm(ast.String(subject)))},
+		[2]*ast.Term{ast.NewTerm(ast.String("resource")), ast.NewTerm(ast.String(resource))},
+		[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(action))},
+		[2]*ast.Term{ast.NewTerm(ast.String("projects")), ast.ArrayTerm(ast.NewTerm(ast.String(project)))},
+	)
+	resultSet, err := s.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
+	if err != nil {
+		return false, &EvaluationError{e: err}
+	}
+	return s.allowedFromPreparedEvalQuery(resultSet)
+}
 
+func (s *State) IsAuthorized(ctx context.Context, subject engine.Subject, action engine.Action, resource engine.Resource) (bool, error) {
+	opaInput := map[string]interface{}{
+		"subjects": engine.MakeSubjects(subject),
+		"pairs":    engine.MakePairs(engine.Pair{Resource: resource, Action: action}),
+	}
+
+	rs, err := s.evalQuery(ctx, s.queries[filteredPairsQuery], opaInput, s.store)
+	if err != nil {
+		return false, &EvaluationError{e: err}
+	}
+
+	return s.pairsFromAllowed(rs)
+}
+
+func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}, store storage.Store) (rego.ResultSet, error) {
 	var tracer *topdown.BufferTracer
 
 	rs, err := rego.New(
@@ -288,6 +313,29 @@ func (s *State) pairsFromResults(rs rego.ResultSet) (engine.Pairs, error) {
 	}
 
 	return pairs, nil
+}
+
+func (s *State) pairsFromAllowed(rs rego.ResultSet) (bool, error) {
+	for _, r := range rs {
+		if len(r.Expressions) != 1 {
+			return false, &UnexpectedResultExpressionError{exps: r.Expressions}
+		}
+		m, ok := r.Expressions[0].Value.(map[string]interface{})
+		if !ok {
+			return false, &UnexpectedResultExpressionError{exps: r.Expressions}
+		}
+		_, ok = m["resource"].(string)
+		if !ok {
+			return false, &UnexpectedResultExpressionError{exps: r.Expressions}
+		}
+		_, ok = m["action"].(string)
+		if !ok {
+			return false, &UnexpectedResultExpressionError{exps: r.Expressions}
+		}
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (s *State) projectsFromPartialResults(rs rego.ResultSet) (engine.Projects, error) {
@@ -339,6 +387,18 @@ func (s *State) projectsFromPreparedEvalQuery(rs rego.ResultSet) (engine.Project
 	return result, nil
 }
 
+func (s *State) allowedFromPreparedEvalQuery(rs rego.ResultSet) (bool, error) {
+	var ok bool
+	for i := range rs {
+		_, ok = rs[i].Bindings["project"].(string)
+		if !ok {
+			return false, &UnexpectedResultExpressionError{exps: rs[i].Expressions}
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func (s *State) SetPolicies(ctx context.Context, policyMap map[string]interface{}, roleMap map[string]interface{}) error {
 	s.store = inmem.NewFromObject(map[string]interface{}{
 		"policies": policyMap,
@@ -346,28 +406,4 @@ func (s *State) SetPolicies(ctx context.Context, policyMap map[string]interface{
 	})
 
 	return s.makeAuthorizedProjectPreparedQuery(ctx)
-}
-
-type UnexpectedResultExpressionError struct {
-	exps []*rego.ExpressionValue
-}
-
-func (e *UnexpectedResultExpressionError) Error() string {
-	return fmt.Sprintf("unexpected result expressions: %v", e.exps)
-}
-
-type UnexpectedResultSetError struct {
-	set rego.ResultSet
-}
-
-func (e *UnexpectedResultSetError) Error() string {
-	return fmt.Sprintf("unexpected result set: %v", e.set)
-}
-
-type EvaluationError struct {
-	e error
-}
-
-func (e *EvaluationError) Error() string {
-	return fmt.Sprintf("error in query evaluation: %s", e.e.Error())
 }

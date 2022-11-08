@@ -86,7 +86,7 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.authorityId, func(t *testing.T) {
-			r, err := s.FilterAuthorizedPairs(ctx, engine.MakeSubjects(test.authorityId), engine.MakePairs(engine.MakePair(test.path, test.action)))
+			r, err := s.FilterAuthorizedPairs(ctx, engine.MakeSubjects(engine.Subject(test.authorityId)), engine.MakePairs(engine.MakePair(test.path, test.action)))
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)
@@ -141,7 +141,7 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.subjects[0], func(t *testing.T) {
+		t.Run(string(test.subjects[0]), func(t *testing.T) {
 			r, err := s.FilterAuthorizedProjects(ctx, test.subjects)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
@@ -291,7 +291,7 @@ func TestProjectsAuthorized(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.subjects[0], func(t *testing.T) {
+		t.Run(string(test.subjects[0]), func(t *testing.T) {
 			r, err := s.ProjectsAuthorized(ctx, test.subjects, test.action, test.resource, test.projects)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)

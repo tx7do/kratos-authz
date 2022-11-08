@@ -480,7 +480,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingProjects(b *testing.B) {
 			var err error
 			for n := 0; n < b.N; n++ {
 				// include all projects in the filter to test the most amount of work the function might have to undertake
-				resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects(member), "secrets:secrets:create", "secrets:secrets", projectIDs)
+				resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects(engine.Subject(member)), "secrets:secrets:create", "secrets:secrets", projectIDs)
 				if err != nil {
 					b.Error(err)
 				}
@@ -525,7 +525,7 @@ func BenchmarkFilterAuthorizedProjectsIncreasingProjects(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.FilterAuthorizedProjects(ctx, engine.MakeSubjects(member))
+				resp, err = s.FilterAuthorizedProjects(ctx, engine.MakeSubjects(engine.Subject(member)))
 				if err != nil {
 					b.Error(err)
 				}
@@ -705,7 +705,7 @@ func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 	for k := 0; k < policyCount; k++ {
 		// add member to each policy as we iterate
 		pol := policies[fmt.Sprintf("pol-%v", k)].(map[string]interface{})
-		pol["members"] = engine.MakeSubjects(member)
+		pol["members"] = engine.MakeSubjects(engine.Subject(member))
 
 		// refresh store to reflect policies with the subject as a member
 		s.store = inmem.NewFromObject(map[string]interface{}{
@@ -747,7 +747,7 @@ func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 func randomTeams(c int) engine.Subjects {
 	ret := make(engine.Subjects, c)
 	for i := 0; i < c; i++ {
-		ret[i] = fmt.Sprintf("team:local:team%d", i)
+		ret[i] = engine.Subject(fmt.Sprintf("team:local:team%d", i))
 	}
 	return ret
 }

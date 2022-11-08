@@ -18,11 +18,13 @@ type State struct {
 	model    model.Model
 	policy   *Adapter
 	enforcer *stdCasbin.SyncedEnforcer
+	projects engine.Projects
 }
 
 func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	s := State{
-		policy: newAdapter(),
+		policy:   newAdapter(),
+		projects: engine.Projects{},
 	}
 
 	for _, opt := range opts {
@@ -46,19 +48,14 @@ func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	return &s, nil
 }
 
-func (s *State) ProjectsAuthorized(_ context.Context,
-	subjects engine.Subjects,
-	action engine.Action,
-	resource engine.Resource,
-	projects engine.Projects) (engine.Projects, error) {
-
+func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {
 	result := make(engine.Projects, 0, len(projects))
 
 	var err error
 	var allowed bool
 	for _, project := range projects {
 		for _, subject := range subjects {
-			if allowed, err = s.enforcer.Enforce(subject, string(resource), string(action), string(project)); err != nil {
+			if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
 			} else if allowed {
@@ -71,18 +68,17 @@ func (s *State) ProjectsAuthorized(_ context.Context,
 }
 
 func (s *State) FilterAuthorizedProjects(_ context.Context, subjects engine.Subjects) (engine.Projects, error) {
-	projects := s.policy.GetProjects()
-	result := make(engine.Projects, 0, len(projects))
+	result := make(engine.Projects, 0, len(s.projects))
 
 	var err error
 	var allowed bool
-	for _, project := range projects {
+	for _, project := range s.projects {
 		for _, subject := range subjects {
-			if allowed, err = s.enforcer.EnforceWithMatcher(authorizedProjectsMatcher, subject, wildcardItem, wildcardItem, string(project)); err != nil {
+			if allowed, err = s.enforcer.EnforceWithMatcher(authorizedProjectsMatcher, string(subject), wildcardItem, wildcardItem, string(project)); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
 			} else if allowed {
-				result = append(result, engine.Project(project))
+				result = append(result, project)
 			}
 		}
 	}
@@ -96,7 +92,7 @@ func (s *State) FilterAuthorizedPairs(_ context.Context, subjects engine.Subject
 	var allowed bool
 	for _, p := range pairs {
 		for _, subject := range subjects {
-			if allowed, err = s.enforcer.Enforce(subject, string(p.Resource), string(p.Action), wildcardItem); err != nil {
+			if allowed, err = s.enforcer.Enforce(string(subject), string(p.Resource), string(p.Action), wildcardItem); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
 			} else if allowed {
@@ -107,9 +103,42 @@ func (s *State) FilterAuthorizedPairs(_ context.Context, subjects engine.Subject
 	return result, nil
 }
 
+func (s *State) IsProjectAuthorized(_ context.Context, subject engine.Subject, action engine.Action, resource engine.Resource, project engine.Project) (bool, error) {
+	var err error
+	var allowed bool
+	if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
+		//fmt.Println(allowed, err)
+		return false, err
+	} else if allowed {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *State) IsAuthorized(_ context.Context, subject engine.Subject, action engine.Action, resource engine.Resource) (bool, error) {
+	var err error
+	var allowed bool
+	if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), wildcardItem); err != nil {
+		//fmt.Println(allowed, err)
+		return false, err
+	} else if allowed {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (s *State) SetPolicies(_ context.Context, policyMap map[string]interface{}, _ map[string]interface{}) error {
 	s.policy.SetPolicies(policyMap)
 	err := s.enforcer.LoadPolicy()
 	//fmt.Println(err, s.enforcer.GetAllSubjects(), s.enforcer.GetAllRoles())
+
+	projects, ok := policyMap["projects"]
+	if ok {
+		switch t := projects.(type) {
+		case engine.Projects:
+			s.projects = t
+		}
+	}
+
 	return err
 }

@@ -24,22 +24,23 @@ var (
 )
 
 func isAllowedTuple4(ctx context.Context, e engine.Engine, sub, obj, act, dom string) (bool, error) {
-	result, err := e.ProjectsAuthorized(ctx,
-		engine.MakeSubjects(sub),
+	result, err := e.IsProjectAuthorized(ctx,
+		engine.Subject(sub),
 		engine.Action(act),
 		engine.Resource(obj),
-		engine.MakeProjects(engine.Project(dom)),
+		engine.Project(dom),
 	)
 	//fmt.Println(result, sub, obj, act, dom)
-	return len(result) > 0, err
+	return result, err
 }
 
 func isAllowedTuple3(ctx context.Context, e engine.Engine, sub, obj, act string) (bool, error) {
-	result, err := e.FilterAuthorizedPairs(ctx,
-		engine.MakeSubjects(sub),
-		engine.MakePairs(engine.MakePair(obj, act)),
+	result, err := e.IsAuthorized(ctx,
+		engine.Subject(sub),
+		engine.Action(act),
+		engine.Resource(obj),
 	)
-	return len(result) > 0, err
+	return result, err
 }
 
 func isAllowed(ctx context.Context, e engine.Engine, request SecurityUser, withDomain bool) (bool, error) {

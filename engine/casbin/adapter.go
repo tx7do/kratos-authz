@@ -3,7 +3,6 @@ package casbin
 import (
 	"errors"
 	"github.com/casbin/casbin/v2/model"
-	"github.com/tx7do/kratos-authz/engine"
 )
 
 type Adapter struct {
@@ -47,19 +46,4 @@ func (sa *Adapter) RemoveFilteredPolicy(_ string, _ string, _ int, _ ...string) 
 
 func (sa *Adapter) SetPolicies(policies map[string]interface{}) {
 	sa.policies = policies
-}
-
-func (sa *Adapter) GetProjects() engine.Projects {
-	projects, ok := sa.policies["projects"]
-	if !ok {
-		return nil
-	}
-	switch t := projects.(type) {
-	//case []string:
-	//	return engine.Projects(t)
-	case engine.Projects:
-		return t
-	default:
-		return nil
-	}
 }

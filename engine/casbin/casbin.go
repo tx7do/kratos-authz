@@ -14,6 +14,8 @@ const (
 	authorizedProjectsMatcher = "g(r.sub, p.sub, p.dom) && (keyMatch(r.dom, p.dom) || p.dom == '*')"
 )
 
+var _ engine.Engine = (*State)(nil)
+
 type State struct {
 	model    model.Model
 	policy   *Adapter

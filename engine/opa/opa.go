@@ -22,6 +22,8 @@ import (
 	"github.com/tx7do/kratos-authz/engine"
 )
 
+var _ engine.Engine = (*State)(nil)
+
 type State struct {
 	store                storage.Store
 	queries              map[string]ast.Body

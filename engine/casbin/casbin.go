@@ -48,14 +48,28 @@ func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	return &s, nil
 }
 
-func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {
-	result := make(engine.Projects, 0, len(projects))
+func (s *State) ProjectsAuthorized(ctx context.Context) (engine.Projects, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return nil, engine.ErrMissingAuthClaims
+	}
+
+	if claims.Subjects == nil || claims.Action == nil || claims.Resource == nil || claims.Projects == nil {
+		return nil, engine.ErrInvalidClaims
+	}
+
+	subjects := claims.Subjects
+	projects := claims.Projects
+	resource := claims.Resource
+	action := claims.Action
+
+	result := make(engine.Projects, 0, len(*projects))
 
 	var err error
 	var allowed bool
-	for _, project := range projects {
-		for _, subject := range subjects {
-			if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
+	for _, project := range *projects {
+		for _, subject := range *subjects {
+			if allowed, err = s.enforcer.Enforce(string(subject), string(*resource), string(*action), string(project)); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
 			} else if allowed {
@@ -67,13 +81,24 @@ func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, 
 	return result, nil
 }
 
-func (s *State) FilterAuthorizedProjects(_ context.Context, subjects engine.Subjects) (engine.Projects, error) {
+func (s *State) FilterAuthorizedProjects(ctx context.Context) (engine.Projects, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return nil, engine.ErrMissingAuthClaims
+	}
+
+	if claims.Subjects == nil {
+		return nil, engine.ErrInvalidClaims
+	}
+
+	subjects := claims.Subjects
+
 	result := make(engine.Projects, 0, len(s.projects))
 
 	var err error
 	var allowed bool
 	for _, project := range s.projects {
-		for _, subject := range subjects {
+		for _, subject := range *subjects {
 			if allowed, err = s.enforcer.EnforceWithMatcher(authorizedProjectsMatcher, string(subject), wildcardItem, wildcardItem, string(project)); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
@@ -82,16 +107,29 @@ func (s *State) FilterAuthorizedProjects(_ context.Context, subjects engine.Subj
 			}
 		}
 	}
+
 	return result, nil
 }
 
-func (s *State) FilterAuthorizedPairs(_ context.Context, subjects engine.Subjects, pairs engine.Pairs) (engine.Pairs, error) {
-	result := make(engine.Pairs, 0, len(pairs))
+func (s *State) FilterAuthorizedPairs(ctx context.Context) (engine.Pairs, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return nil, engine.ErrMissingAuthClaims
+	}
+
+	if claims.Subjects == nil || claims.Pairs == nil {
+		return nil, engine.ErrInvalidClaims
+	}
+
+	subjects := claims.Subjects
+	pairs := claims.Pairs
+
+	result := make(engine.Pairs, 0, len(*pairs))
 
 	var err error
 	var allowed bool
-	for _, p := range pairs {
-		for _, subject := range subjects {
+	for _, p := range *pairs {
+		for _, subject := range *subjects {
 			if allowed, err = s.enforcer.Enforce(string(subject), string(p.Resource), string(p.Action), wildcardItem); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
@@ -103,22 +141,26 @@ func (s *State) FilterAuthorizedPairs(_ context.Context, subjects engine.Subject
 	return result, nil
 }
 
-func (s *State) IsProjectAuthorized(_ context.Context, subject engine.Subject, action engine.Action, resource engine.Resource, project engine.Project) (bool, error) {
-	var err error
-	var allowed bool
-	if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
-		//fmt.Println(allowed, err)
-		return false, err
-	} else if allowed {
-		return true, nil
+func (s *State) IsAuthorized(ctx context.Context) (bool, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return false, engine.ErrMissingAuthClaims
 	}
-	return false, nil
-}
 
-func (s *State) IsAuthorized(_ context.Context, subject engine.Subject, action engine.Action, resource engine.Resource) (bool, error) {
+	if claims.Subject == nil || claims.Resource == nil || claims.Action == nil {
+		return false, engine.ErrInvalidClaims
+	}
+
+	var project string
+	if claims.Project == nil {
+		project = wildcardItem
+	} else if len(*claims.Project) > 0 {
+		project = string(*claims.Project)
+	}
+
 	var err error
 	var allowed bool
-	if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), wildcardItem); err != nil {
+	if allowed, err = s.enforcer.Enforce(string(*claims.Subject), string(*claims.Resource), string(*claims.Action), project); err != nil {
 		//fmt.Println(allowed, err)
 		return false, err
 	} else if allowed {

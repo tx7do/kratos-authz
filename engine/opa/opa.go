@@ -190,21 +190,35 @@ func dumpData(ctx context.Context, store storage.Store) error {
 	return store.Commit(ctx, txn)
 }
 
-func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {
+func (s *State) ProjectsAuthorized(ctx context.Context) (engine.Projects, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return nil, engine.ErrMissingAuthClaims
+	}
+
+	if claims.Subjects == nil || claims.Action == nil || claims.Resource == nil || claims.Projects == nil {
+		return nil, engine.ErrInvalidClaims
+	}
+
+	subjects := claims.Subjects
+	projects := claims.Projects
+	resource := claims.Resource
+	action := claims.Action
+
 	var subs []*ast.Term
-	for _, sub := range subjects {
+	for _, sub := range *subjects {
 		subs = append(subs, ast.NewTerm(ast.String(sub)))
 	}
 
 	var projs []*ast.Term
-	for _, proj := range projects {
+	for _, proj := range *projects {
 		projs = append(projs, ast.NewTerm(ast.String(proj)))
 	}
 
 	input := ast.NewObject(
 		[2]*ast.Term{ast.NewTerm(ast.String("subjects")), ast.ArrayTerm(subs...)},
-		[2]*ast.Term{ast.NewTerm(ast.String("resource")), ast.NewTerm(ast.String(resource))},
-		[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(action))},
+		[2]*ast.Term{ast.NewTerm(ast.String("resource")), ast.NewTerm(ast.String(*resource))},
+		[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(*action))},
 		[2]*ast.Term{ast.NewTerm(ast.String("projects")), ast.ArrayTerm(projs...)},
 	)
 	resultSet, err := s.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
@@ -215,10 +229,22 @@ func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects
 	return s.projectsFromPreparedEvalQuery(resultSet)
 }
 
-func (s *State) FilterAuthorizedPairs(ctx context.Context, subjects engine.Subjects, pairs engine.Pairs) (engine.Pairs, error) {
+func (s *State) FilterAuthorizedPairs(ctx context.Context) (engine.Pairs, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return nil, engine.ErrMissingAuthClaims
+	}
+
+	if claims.Subjects == nil || claims.Pairs == nil {
+		return nil, engine.ErrInvalidClaims
+	}
+
+	subjects := claims.Subjects
+	pairs := claims.Pairs
+
 	opaInput := map[string]interface{}{
-		"subjects": subjects,
-		"pairs":    pairs,
+		"subjects": *subjects,
+		"pairs":    *pairs,
 	}
 
 	rs, err := s.evalQuery(ctx, s.queries[filteredPairsQuery], opaInput, s.store)
@@ -229,9 +255,20 @@ func (s *State) FilterAuthorizedPairs(ctx context.Context, subjects engine.Subje
 	return s.pairsFromResults(rs)
 }
 
-func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Subjects) (engine.Projects, error) {
+func (s *State) FilterAuthorizedProjects(ctx context.Context) (engine.Projects, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return nil, engine.ErrMissingAuthClaims
+	}
+
+	if claims.Subjects == nil {
+		return nil, engine.ErrInvalidClaims
+	}
+
+	subjects := claims.Subjects
+
 	opaInput := map[string]interface{}{
-		"subjects": subjects,
+		"subjects": *subjects,
 	}
 
 	rs, err := s.evalQuery(ctx, s.queries[filteredProjectsQuery], opaInput, s.store)
@@ -242,32 +279,48 @@ func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Su
 	return s.projectsFromPartialResults(rs)
 }
 
-func (s *State) IsProjectAuthorized(ctx context.Context, subject engine.Subject, action engine.Action, resource engine.Resource, project engine.Project) (bool, error) {
-	input := ast.NewObject(
-		[2]*ast.Term{ast.NewTerm(ast.String("subjects")), ast.ArrayTerm(ast.NewTerm(ast.String(subject)))},
-		[2]*ast.Term{ast.NewTerm(ast.String("resource")), ast.NewTerm(ast.String(resource))},
-		[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(action))},
-		[2]*ast.Term{ast.NewTerm(ast.String("projects")), ast.ArrayTerm(ast.NewTerm(ast.String(project)))},
-	)
-	resultSet, err := s.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
-	if err != nil {
-		return false, &EvaluationError{e: err}
-	}
-	return s.allowedFromPreparedEvalQuery(resultSet)
-}
-
-func (s *State) IsAuthorized(ctx context.Context, subject engine.Subject, action engine.Action, resource engine.Resource) (bool, error) {
-	opaInput := map[string]interface{}{
-		"subjects": engine.MakeSubjects(subject),
-		"pairs":    engine.MakePairs(engine.Pair{Resource: resource, Action: action}),
+func (s *State) IsAuthorized(ctx context.Context) (bool, error) {
+	claims, ok := engine.AuthClaimsFromContext(ctx)
+	if !ok {
+		return false, engine.ErrMissingAuthClaims
 	}
 
-	rs, err := s.evalQuery(ctx, s.queries[filteredPairsQuery], opaInput, s.store)
-	if err != nil {
-		return false, &EvaluationError{e: err}
-	}
+	if claims.Subject != nil && claims.Resource != nil && claims.Action != nil {
+		subject := claims.Subject
+		resource := claims.Resource
+		action := claims.Action
 
-	return s.pairsFromAllowed(rs)
+		opaInput := map[string]interface{}{
+			"subjects": engine.MakeSubjects(*subject),
+			"pairs":    engine.MakePairs(engine.Pair{Resource: *resource, Action: *action}),
+		}
+
+		rs, err := s.evalQuery(ctx, s.queries[filteredPairsQuery], opaInput, s.store)
+		if err != nil {
+			return false, &EvaluationError{e: err}
+		}
+
+		return s.pairsFromAllowed(rs)
+	} else if claims.Subject != nil && claims.Resource != nil && claims.Action != nil && claims.Project != nil {
+		subject := claims.Subject
+		resource := claims.Resource
+		action := claims.Action
+		project := claims.Project
+
+		input := ast.NewObject(
+			[2]*ast.Term{ast.NewTerm(ast.String("subjects")), ast.ArrayTerm(ast.NewTerm(ast.String(*subject)))},
+			[2]*ast.Term{ast.NewTerm(ast.String("resource")), ast.NewTerm(ast.String(*resource))},
+			[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(*action))},
+			[2]*ast.Term{ast.NewTerm(ast.String("projects")), ast.ArrayTerm(ast.NewTerm(ast.String(*project)))},
+		)
+		resultSet, err := s.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
+		if err != nil {
+			return false, &EvaluationError{e: err}
+		}
+		return s.allowedFromPreparedEvalQuery(resultSet)
+	} else {
+		return false, engine.ErrInvalidClaims
+	}
 }
 
 func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}, store storage.Store) (rego.ResultSet, error) {

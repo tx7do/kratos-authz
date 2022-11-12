@@ -86,7 +86,15 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.authorityId, func(t *testing.T) {
-			r, err := s.FilterAuthorizedPairs(ctx, engine.MakeSubjects(engine.Subject(test.authorityId)), engine.MakePairs(engine.MakePair(test.path, test.action)))
+			subjects := engine.MakeSubjects(engine.Subject(test.authorityId))
+			pairs := engine.MakePairs(engine.MakePair(test.path, test.action))
+			claims := engine.AuthClaims{
+				Subjects: &subjects,
+				Pairs:    &pairs,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+			r, err := s.FilterAuthorizedPairs(ctx)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)
@@ -114,7 +122,11 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 	assert.Nil(t, err)
 
 	subjects := engine.Subjects{"bobo"}
-	r, err := s.FilterAuthorizedProjects(ctx, subjects)
+	claims := engine.AuthClaims{
+		Subjects: &subjects,
+	}
+	ctx = engine.ContextWithAuthClaims(ctx, &claims)
+	r, err := s.FilterAuthorizedProjects(ctx)
 	assert.Nil(t, err)
 	fmt.Println(r)
 
@@ -142,7 +154,12 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.subjects[0]), func(t *testing.T) {
-			r, err := s.FilterAuthorizedProjects(ctx, test.subjects)
+			claims := engine.AuthClaims{
+				Subjects: &test.subjects,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+			r, err := s.FilterAuthorizedProjects(ctx)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)
@@ -179,7 +196,14 @@ func TestProjectsAuthorized(t *testing.T) {
 	action := engine.Action("GET")
 	resource := engine.Resource("/api/users")
 	projects := engine.Projects{"project1"}
-	r, err := s.ProjectsAuthorized(ctx, subjects, action, resource, projects)
+	claims := engine.AuthClaims{
+		Subjects: &subjects,
+		Action:   &action,
+		Resource: &resource,
+		Projects: &projects,
+	}
+	ctx = engine.ContextWithAuthClaims(ctx, &claims)
+	r, err := s.ProjectsAuthorized(ctx)
 	assert.Nil(t, err)
 	fmt.Println(r)
 
@@ -292,7 +316,14 @@ func TestProjectsAuthorized(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.subjects[0]), func(t *testing.T) {
-			r, err := s.ProjectsAuthorized(ctx, test.subjects, test.action, test.resource, test.projects)
+			claims := engine.AuthClaims{
+				Subjects: &test.subjects,
+				Action:   &test.action,
+				Resource: &test.resource,
+				Projects: &test.projects,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
+			r, err := s.ProjectsAuthorized(ctx)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)

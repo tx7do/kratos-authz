@@ -129,7 +129,13 @@ func BenchmarkFilterAuthorizedPairsRealWorldExample(b *testing.B) {
 			var resp engine.Pairs
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.FilterAuthorizedPairs(ctx, append(engine.MakeSubjects("user:local:test@example.com"), randomTeams(count)...), pairs)
+				subject := append(engine.MakeSubjects("user:local:test@example.com"), randomTeams(count)...)
+				claims := engine.AuthClaims{
+					Subjects: &subject,
+					Pairs:    &pairs,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+				resp, err = s.FilterAuthorizedPairs(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -263,7 +269,18 @@ func BenchmarkProjectsAuthorizedWithIncreasingPolicies(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects("user:local:test"), "compliance:profiles:list", "compliance:profiles", allProjects)
+				subject := engine.MakeSubjects("user:local:test")
+				action := engine.Action("compliance:profiles:list")
+				resource := engine.Resource("compliance:profiles")
+				claims := engine.AuthClaims{
+					Subjects: &subject,
+					Action:   &action,
+					Resource: &resource,
+					Projects: &allProjects,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+				resp, err = s.ProjectsAuthorized(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -309,7 +326,13 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingPolicies(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.FilterAuthorizedProjects(ctx, engine.MakeSubjects("user:local:test"))
+				subjects := engine.MakeSubjects("user:local:test")
+				claims := engine.AuthClaims{
+					Subjects: &subjects,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+				resp, err = s.FilterAuthorizedProjects(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -392,7 +415,17 @@ func BenchmarkProjectsAuthorizedWithIncreasingRoles(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects("user:local:test"), "compliance:profiles:list", "compliance:profiles", allProjects)
+				subject := engine.MakeSubjects("user:local:test")
+				action := engine.Action("compliance:profiles:list")
+				resource := engine.Resource("compliance:profiles")
+				claims := engine.AuthClaims{
+					Subjects: &subject,
+					Action:   &action,
+					Resource: &resource,
+					Projects: &allProjects,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+				resp, err = s.ProjectsAuthorized(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -435,7 +468,12 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingRoles(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.FilterAuthorizedProjects(ctx, engine.MakeSubjects("user:local:test"))
+				subject := engine.MakeSubjects("user:local:test")
+				claims := engine.AuthClaims{
+					Subjects: &subject,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+				resp, err = s.FilterAuthorizedProjects(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -480,7 +518,18 @@ func BenchmarkProjectsAuthorizedWithIncreasingProjects(b *testing.B) {
 			var err error
 			for n := 0; n < b.N; n++ {
 				// include all projects in the filter to test the most amount of work the function might have to undertake
-				resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects(engine.Subject(member)), "secrets:secrets:create", "secrets:secrets", projectIDs)
+				subjects := engine.MakeSubjects(engine.Subject(member))
+				action := engine.Action("secrets:secrets:create")
+				resource := engine.Resource("secrets:secrets")
+				claims := engine.AuthClaims{
+					Subjects: &subjects,
+					Action:   &action,
+					Resource: &resource,
+					Projects: &projectIDs,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+				resp, err = s.ProjectsAuthorized(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -525,7 +574,12 @@ func BenchmarkFilterAuthorizedProjectsIncreasingProjects(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.FilterAuthorizedProjects(ctx, engine.MakeSubjects(engine.Subject(member)))
+				subject := engine.MakeSubjects(engine.Subject(member))
+				claims := engine.AuthClaims{
+					Subjects: &subject,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+				resp, err = s.FilterAuthorizedProjects(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -567,8 +621,18 @@ func BenchmarkProjectsAuthorizedWithIncreasingSubjects(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.ProjectsAuthorized(ctx, append(engine.MakeSubjects("user:local:test"), randomTeams(subjectCount)...),
-					"iam:projects:delete", "iam:projects", allProjects)
+				subjects := append(engine.MakeSubjects("user:local:test"), randomTeams(subjectCount)...)
+				action := engine.Action("iam:projects:delete")
+				resource := engine.Resource("iam:projects")
+				claims := engine.AuthClaims{
+					Subjects: &subjects,
+					Action:   &action,
+					Resource: &resource,
+					Projects: &allProjects,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+				resp, err = s.ProjectsAuthorized(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -618,7 +682,13 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingSubjects(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.FilterAuthorizedProjects(ctx, append(engine.MakeSubjects("user:local:test"), randomTeams(subjectCount)...))
+				subjects := append(engine.MakeSubjects("user:local:test"), randomTeams(subjectCount)...)
+				claims := engine.AuthClaims{
+					Subjects: &subjects,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+				resp, err = s.FilterAuthorizedProjects(ctx)
 				if err != nil {
 					b.Error(err)
 				}
@@ -694,7 +764,18 @@ func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 		var resp engine.Projects
 		var err error
 		for n := 0; n < b.N; n++ {
-			resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects("user:local:test"), "iam:projects:delete", "iam:projects", allProjects)
+			subject := engine.MakeSubjects("user:local:test")
+			action := engine.Action("iam:projects:delete")
+			resource := engine.Resource("iam:projects")
+			claims := engine.AuthClaims{
+				Subjects: &subject,
+				Action:   &action,
+				Resource: &resource,
+				Projects: &allProjects,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+			resp, err = s.ProjectsAuthorized(ctx)
 			if err != nil {
 				b.Error(err)
 			}
@@ -719,7 +800,18 @@ func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				resp, err = s.ProjectsAuthorized(ctx, engine.MakeSubjects("user:local:test"), "iam:projects:delete", "iam:projects", allProjects)
+				subject := engine.MakeSubjects("user:local:test")
+				action := engine.Action("iam:projects:delete")
+				resource := engine.Resource("iam:projects")
+				claims := engine.AuthClaims{
+					Subjects: &subject,
+					Action:   &action,
+					Resource: &resource,
+					Projects: &allProjects,
+				}
+				ctx = engine.ContextWithAuthClaims(ctx, &claims)
+
+				resp, err = s.ProjectsAuthorized(ctx)
 				if err != nil {
 					b.Error(err)
 				}

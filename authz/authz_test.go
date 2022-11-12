@@ -3,11 +3,11 @@ package authz
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/go-kratos/kratos/v2/middleware"
-	"github.com/go-kratos/kratos/v2/middleware/auth/jwt"
 	"github.com/go-kratos/kratos/v2/transport"
+	"github.com/tx7do/kratos-authz/engine"
+	"github.com/tx7do/kratos-authz/engine/opa"
 	"io"
 	"os"
 	"testing"
@@ -15,7 +15,6 @@ import (
 	jwtV4 "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/tx7do/kratos-authz/engine"
 	"github.com/tx7do/kratos-authz/engine/casbin"
 )
 
@@ -57,62 +56,6 @@ func (tr *myTransport) ReplyHeader() transport.Header {
 	return nil
 }
 
-type mySecurityUser struct {
-	Path        string
-	Method      string
-	AuthorityId string
-	Domain      string
-}
-
-func NewSecurityUser() SecurityUser {
-	return &mySecurityUser{}
-}
-
-func (su *mySecurityUser) ParseFromContext(ctx context.Context) error {
-	if claims, ok := jwt.FromContext(ctx); ok {
-		str, ok := claims.(jwtV4.MapClaims)[ClaimAuthorityId]
-		if ok {
-			su.AuthorityId = str.(string)
-		}
-		str, ok = claims.(jwtV4.MapClaims)[ClaimDomain]
-		if ok {
-			su.Domain = str.(string)
-		}
-		//str, ok = claims.(jwtV4.MapClaims)[ClaimMethod]
-		//if ok {
-		//	su.Method = str.(string)
-		//}
-	} else {
-		return errors.New("jwt claim missing")
-	}
-
-	if header, ok := transport.FromServerContext(ctx); ok {
-		myHeader := header.(*myTransport)
-		su.Path = header.Operation()
-		su.Method = myHeader.Method()
-	} else {
-		return errors.New("jwt claim missing")
-	}
-
-	return nil
-}
-
-func (su *mySecurityUser) GetSubject() string {
-	return su.AuthorityId
-}
-
-func (su *mySecurityUser) GetObject() string {
-	return su.Path
-}
-
-func (su *mySecurityUser) GetAction() string {
-	return su.Method
-}
-
-func (su *mySecurityUser) GetDomain() string {
-	return su.Domain
-}
-
 func createToken(authorityId, domain string) jwtV4.Claims {
 	return jwtV4.MapClaims{
 		ClaimAuthorityId: authorityId,
@@ -133,8 +76,8 @@ func TestServer_Casbin(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		authorityId string
-		path        string
+		authorityId engine.Subject
+		path        engine.Resource
 		exceptErr   error
 	}{
 		{
@@ -180,24 +123,33 @@ func TestServer_Casbin(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.authorityId, func(t *testing.T) {
+		t.Run(string(test.authorityId), func(t *testing.T) {
 			next := func(ctx context.Context, req interface{}) (interface{}, error) {
 				//t.Log(req)
 				return "reply", nil
 			}
 
-			token := createToken(test.authorityId, "")
-			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: test.path, method: "ANY"})
-			ctx = jwt.NewContext(ctx, token)
+			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: "ANY"})
+
+			e, err := casbin.New(ctx)
+			assert.Nil(t, err)
+
+			err = e.SetPolicies(ctx, policies, nil)
+			assert.Nil(t, err)
+
+			action := engine.Action("ANY")
+
+			claims := engine.AuthClaims{
+				Subject:  &test.authorityId,
+				Action:   &action,
+				Resource: &test.path,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
 
 			var server middleware.Handler
-			server = Server(
-				WithPolicyEngine(ctx, engine.CasbinEngine),
-				WithPolicies(ctx, policies, nil),
-				WithSecurityUserCreator(NewSecurityUser),
-			)(next)
+			server = Server(e)(next)
 
-			_, err := server(ctx, "request")
+			_, err = server(ctx, "request")
 			assert.EqualValues(t, test.exceptErr, err)
 		})
 	}
@@ -216,9 +168,9 @@ func TestServer_CasbinWithDomain(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		authorityId string
-		domain      string
-		path        string
+		authorityId engine.Subject
+		domain      engine.Project
+		path        engine.Resource
 		exceptErr   error
 	}{
 		{
@@ -290,41 +242,38 @@ func TestServer_CasbinWithDomain(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.authorityId, func(t *testing.T) {
+		t.Run(string(test.authorityId), func(t *testing.T) {
 			next := func(ctx context.Context, req interface{}) (interface{}, error) {
 				//t.Log(req)
 				return "reply", nil
 			}
 
-			token := createToken(test.authorityId, test.domain)
-			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: test.path, method: "ANY"})
-			ctx = jwt.NewContext(ctx, token)
+			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: "ANY"})
+
+			e, err := casbin.New(ctx)
+			assert.Nil(t, err)
+
+			err = e.SetPolicies(ctx, policies, nil)
+			assert.Nil(t, err)
+
+			action := engine.Action("ANY")
+
+			claims := engine.AuthClaims{
+				Subject:  &test.authorityId,
+				Action:   &action,
+				Resource: &test.path,
+				Project:  &test.domain,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
 
 			var server middleware.Handler
-			server = Server(
-				WithDomainSupport(),
-				WithPolicyEngine(ctx, engine.CasbinEngine),
-				WithPolicies(ctx, policies, nil),
-				WithSecurityUserCreator(NewSecurityUser),
-			)(next)
+			server = Server(e)(next)
 
-			_, err := server(ctx, "request")
+			_, err = server(ctx, "request")
 			assert.EqualValues(t, test.exceptErr, err)
 		})
 	}
 }
-
-var (
-	allProjects = engine.Projects{
-		"(unassigned)",
-		"project1",
-		"project2",
-		"project3",
-		"project4",
-		"project5",
-		"project6",
-	}
-)
 
 func baselinePoliciesAndRoles() (policies map[string]interface{}, roles map[string]interface{}) {
 	// this file includes system, migrated legacy, and chef-managed policies
@@ -348,12 +297,11 @@ func TestServer_OPA(t *testing.T) {
 	policies, roles := baselinePoliciesAndRoles()
 
 	tests := []struct {
-		authorityId string
-		path        string
-		method      string
-		domain      string
-
-		exceptErr error
+		authorityId engine.Subject
+		path        engine.Resource
+		method      engine.Action
+		domain      engine.Project
+		exceptErr   error
 	}{
 		{
 			authorityId: "user:local:test",
@@ -379,24 +327,32 @@ func TestServer_OPA(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.authorityId, func(t *testing.T) {
+		t.Run(string(test.authorityId), func(t *testing.T) {
 			next := func(ctx context.Context, req interface{}) (interface{}, error) {
 				//t.Log(req)
 				return "reply", nil
 			}
 
-			token := createToken(test.authorityId, test.domain)
-			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: test.path, method: test.method})
-			ctx = jwt.NewContext(ctx, token)
+			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: string(test.method)})
+
+			e, err := opa.New(ctx)
+			assert.Nil(t, err)
+
+			err = e.SetPolicies(ctx, policies, roles)
+			assert.Nil(t, err)
+
+			claims := engine.AuthClaims{
+				Subject:  &test.authorityId,
+				Action:   &test.method,
+				Resource: &test.path,
+				Project:  &test.domain,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
 
 			var server middleware.Handler
-			server = Server(
-				WithPolicyEngine(ctx, engine.OpaEngine),
-				WithPolicies(ctx, policies, roles),
-				WithSecurityUserCreator(NewSecurityUser),
-			)(next)
+			server = Server(e)(next)
 
-			_, err := server(ctx, "request")
+			_, err = server(ctx, "request")
 			assert.EqualValues(t, test.exceptErr, err)
 		})
 	}
@@ -412,12 +368,11 @@ func TestServer_OPAWithDomain(t *testing.T) {
 	//fmt.Println(policies, roles)
 
 	tests := []struct {
-		authorityId string
-		path        string
-		method      string
-		domain      string
-
-		exceptErr error
+		authorityId engine.Subject
+		path        engine.Resource
+		method      engine.Action
+		domain      engine.Project
+		exceptErr   error
 	}{
 		{
 			authorityId: "user:local:test",
@@ -478,25 +433,32 @@ func TestServer_OPAWithDomain(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.authorityId, func(t *testing.T) {
+		t.Run(string(test.authorityId), func(t *testing.T) {
 			next := func(ctx context.Context, req interface{}) (interface{}, error) {
 				//t.Log(req)
 				return "reply", nil
 			}
 
-			token := createToken(test.authorityId, test.domain)
-			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: test.path, method: test.method})
-			ctx = jwt.NewContext(ctx, token)
+			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: string(test.method)})
+
+			e, err := opa.New(ctx)
+			assert.Nil(t, err)
+
+			err = e.SetPolicies(ctx, policies, roles)
+			assert.Nil(t, err)
+
+			claims := engine.AuthClaims{
+				Subject:  &test.authorityId,
+				Action:   &test.method,
+				Resource: &test.path,
+				Project:  &test.domain,
+			}
+			ctx = engine.ContextWithAuthClaims(ctx, &claims)
 
 			var server middleware.Handler
-			server = Server(
-				WithDomainSupport(),
-				WithPolicyEngine(ctx, engine.OpaEngine),
-				WithPolicies(ctx, policies, roles),
-				WithSecurityUserCreator(NewSecurityUser),
-			)(next)
+			server = Server(e)(next)
 
-			_, err := server(ctx, "request")
+			_, err = server(ctx, "request")
 			assert.EqualValues(t, test.exceptErr, err)
 		})
 	}

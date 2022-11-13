@@ -1,5 +1,7 @@
 APP_VERSION=v0.0.1
 
+PACKAGE_LIST = engine/opa/ engine/noop/ engine/casbin/ authz/
+
 .PHONY: tag
 tag:
-	git tag -f $(APP_VERSION) && git tag -f engine/opa/$(APP_VERSION) && git tag -f engine/noop/$(APP_VERSION) && git tag -f engine/casbin/$(APP_VERSION) && git tag -f authz/$(APP_VERSION) && git push --tags --force
+	git tag -f $(APP_VERSION) && $(foreach item, $(PACKAGE_LIST), git tag -f $(item)$(APP_VERSION) && ) git push --tags --force

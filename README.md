@@ -6,4 +6,4 @@
 
 - [Casbin](https://github.com/casbin/casbin)
 - [Open Policy Agent (OPA)](https://github.com/open-policy-agent/opa)
-- [Ory Keto (Google Zanzibar)](https://github.com/ory/keto)
+- [Google Zanzibar](https://zanzibar.academy/)

@@ -130,12 +130,7 @@ func BenchmarkFilterAuthorizedPairsRealWorldExample(b *testing.B) {
 			var err error
 			for n := 0; n < b.N; n++ {
 				subject := append(engine.MakeSubjects("user:local:test@example.com"), randomTeams(count)...)
-				claims := engine.AuthClaims{
-					Subjects: &subject,
-					Pairs:    &pairs,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-				resp, err = s.FilterAuthorizedPairs(ctx)
+				resp, err = s.FilterAuthorizedPairs(ctx, subject, pairs)
 				if err != nil {
 					b.Error(err)
 				}
@@ -272,15 +267,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingPolicies(b *testing.B) {
 				subject := engine.MakeSubjects("user:local:test")
 				action := engine.Action("compliance:profiles:list")
 				resource := engine.Resource("compliance:profiles")
-				claims := engine.AuthClaims{
-					Subjects: &subject,
-					Action:   &action,
-					Resource: &resource,
-					Projects: &allProjects,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-				resp, err = s.ProjectsAuthorized(ctx)
+				resp, err = s.ProjectsAuthorized(ctx, subject, action, resource, allProjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -327,12 +314,7 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingPolicies(b *testing.B) {
 			var err error
 			for n := 0; n < b.N; n++ {
 				subjects := engine.MakeSubjects("user:local:test")
-				claims := engine.AuthClaims{
-					Subjects: &subjects,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-				resp, err = s.FilterAuthorizedProjects(ctx)
+				resp, err = s.FilterAuthorizedProjects(ctx, subjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -418,14 +400,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingRoles(b *testing.B) {
 				subject := engine.MakeSubjects("user:local:test")
 				action := engine.Action("compliance:profiles:list")
 				resource := engine.Resource("compliance:profiles")
-				claims := engine.AuthClaims{
-					Subjects: &subject,
-					Action:   &action,
-					Resource: &resource,
-					Projects: &allProjects,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-				resp, err = s.ProjectsAuthorized(ctx)
+				resp, err = s.ProjectsAuthorized(ctx, subject, action, resource, allProjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -468,12 +443,8 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingRoles(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				subject := engine.MakeSubjects("user:local:test")
-				claims := engine.AuthClaims{
-					Subjects: &subject,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-				resp, err = s.FilterAuthorizedProjects(ctx)
+				subjects := engine.MakeSubjects("user:local:test")
+				resp, err = s.FilterAuthorizedProjects(ctx, subjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -521,15 +492,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingProjects(b *testing.B) {
 				subjects := engine.MakeSubjects(engine.Subject(member))
 				action := engine.Action("secrets:secrets:create")
 				resource := engine.Resource("secrets:secrets")
-				claims := engine.AuthClaims{
-					Subjects: &subjects,
-					Action:   &action,
-					Resource: &resource,
-					Projects: &projectIDs,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-				resp, err = s.ProjectsAuthorized(ctx)
+				resp, err = s.ProjectsAuthorized(ctx, subjects, action, resource, projectIDs)
 				if err != nil {
 					b.Error(err)
 				}
@@ -574,12 +537,8 @@ func BenchmarkFilterAuthorizedProjectsIncreasingProjects(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				subject := engine.MakeSubjects(engine.Subject(member))
-				claims := engine.AuthClaims{
-					Subjects: &subject,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-				resp, err = s.FilterAuthorizedProjects(ctx)
+				subjects := engine.MakeSubjects(engine.Subject(member))
+				resp, err = s.FilterAuthorizedProjects(ctx, subjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -624,15 +583,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingSubjects(b *testing.B) {
 				subjects := append(engine.MakeSubjects("user:local:test"), randomTeams(subjectCount)...)
 				action := engine.Action("iam:projects:delete")
 				resource := engine.Resource("iam:projects")
-				claims := engine.AuthClaims{
-					Subjects: &subjects,
-					Action:   &action,
-					Resource: &resource,
-					Projects: &allProjects,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-				resp, err = s.ProjectsAuthorized(ctx)
+				resp, err = s.ProjectsAuthorized(ctx, subjects, action, resource, allProjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -683,12 +634,7 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingSubjects(b *testing.B) {
 			var err error
 			for n := 0; n < b.N; n++ {
 				subjects := append(engine.MakeSubjects("user:local:test"), randomTeams(subjectCount)...)
-				claims := engine.AuthClaims{
-					Subjects: &subjects,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-				resp, err = s.FilterAuthorizedProjects(ctx)
+				resp, err = s.FilterAuthorizedProjects(ctx, subjects)
 				if err != nil {
 					b.Error(err)
 				}
@@ -764,18 +710,10 @@ func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 		var resp engine.Projects
 		var err error
 		for n := 0; n < b.N; n++ {
-			subject := engine.MakeSubjects("user:local:test")
+			subjects := engine.MakeSubjects("user:local:test")
 			action := engine.Action("iam:projects:delete")
 			resource := engine.Resource("iam:projects")
-			claims := engine.AuthClaims{
-				Subjects: &subject,
-				Action:   &action,
-				Resource: &resource,
-				Projects: &allProjects,
-			}
-			ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-			resp, err = s.ProjectsAuthorized(ctx)
+			resp, err = s.ProjectsAuthorized(ctx, subjects, action, resource, allProjects)
 			if err != nil {
 				b.Error(err)
 			}
@@ -800,18 +738,10 @@ func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 			var resp engine.Projects
 			var err error
 			for n := 0; n < b.N; n++ {
-				subject := engine.MakeSubjects("user:local:test")
+				subjects := engine.MakeSubjects("user:local:test")
 				action := engine.Action("iam:projects:delete")
 				resource := engine.Resource("iam:projects")
-				claims := engine.AuthClaims{
-					Subjects: &subject,
-					Action:   &action,
-					Resource: &resource,
-					Projects: &allProjects,
-				}
-				ctx = engine.ContextWithAuthClaims(ctx, &claims)
-
-				resp, err = s.ProjectsAuthorized(ctx)
+				resp, err = s.ProjectsAuthorized(ctx, subjects, action, resource, allProjects)
 				if err != nil {
 					b.Error(err)
 				}

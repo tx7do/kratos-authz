@@ -12,15 +12,9 @@ import (
 	"os"
 	"testing"
 
-	jwtV4 "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/tx7do/kratos-authz/engine/casbin"
-)
-
-const (
-	ClaimAuthorityId = "authorityId"
-	ClaimDomain      = "domain"
 )
 
 type myTransport struct {
@@ -54,13 +48,6 @@ func (tr *myTransport) RequestHeader() transport.Header {
 
 func (tr *myTransport) ReplyHeader() transport.Header {
 	return nil
-}
-
-func createToken(authorityId, domain string) jwtV4.Claims {
-	return jwtV4.MapClaims{
-		ClaimAuthorityId: authorityId,
-		ClaimDomain:      domain,
-	}
 }
 
 func TestServer_Casbin(t *testing.T) {

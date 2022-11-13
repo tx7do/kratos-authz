@@ -9,11 +9,6 @@ import (
 	"github.com/tx7do/kratos-authz/engine"
 )
 
-const (
-	wildcardItem              = "*"
-	authorizedProjectsMatcher = "g(r.sub, p.sub, p.dom) && (keyMatch(r.dom, p.dom) || p.dom == '*')"
-)
-
 var _ engine.Engine = (*State)(nil)
 
 type State struct {
@@ -21,12 +16,17 @@ type State struct {
 	policy   *Adapter
 	enforcer *stdCasbin.SyncedEnforcer
 	projects engine.Projects
+
+	wildcardItem              string
+	authorizedProjectsMatcher string
 }
 
 func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	s := State{
-		policy:   newAdapter(),
-		projects: engine.Projects{},
+		policy:                    newAdapter(),
+		projects:                  engine.Projects{},
+		wildcardItem:              "*",
+		authorizedProjectsMatcher: "g(r.sub, p.sub, p.dom) && (keyMatch(r.dom, p.dom) || p.dom == '*')",
 	}
 
 	for _, opt := range opts {
@@ -50,28 +50,14 @@ func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	return &s, nil
 }
 
-func (s *State) ProjectsAuthorized(ctx context.Context) (engine.Projects, error) {
-	claims, ok := engine.AuthClaimsFromContext(ctx)
-	if !ok {
-		return nil, engine.ErrMissingAuthClaims
-	}
-
-	if claims.Subjects == nil || claims.Action == nil || claims.Resource == nil || claims.Projects == nil {
-		return nil, engine.ErrInvalidClaims
-	}
-
-	subjects := claims.Subjects
-	projects := claims.Projects
-	resource := claims.Resource
-	action := claims.Action
-
-	result := make(engine.Projects, 0, len(*projects))
+func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {
+	result := make(engine.Projects, 0, len(projects))
 
 	var err error
 	var allowed bool
-	for _, project := range *projects {
-		for _, subject := range *subjects {
-			if allowed, err = s.enforcer.Enforce(string(subject), string(*resource), string(*action), string(project)); err != nil {
+	for _, project := range projects {
+		for _, subject := range subjects {
+			if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
 			} else if allowed {
@@ -83,56 +69,16 @@ func (s *State) ProjectsAuthorized(ctx context.Context) (engine.Projects, error)
 	return result, nil
 }
 
-func (s *State) FilterAuthorizedProjects(ctx context.Context) (engine.Projects, error) {
-	claims, ok := engine.AuthClaimsFromContext(ctx)
-	if !ok {
-		return nil, engine.ErrMissingAuthClaims
-	}
+func (s *State) FilterAuthorizedPairs(_ context.Context, subjects engine.Subjects, pairs engine.Pairs) (engine.Pairs, error) {
+	result := make(engine.Pairs, 0, len(pairs))
 
-	if claims.Subjects == nil {
-		return nil, engine.ErrInvalidClaims
-	}
-
-	subjects := claims.Subjects
-
-	result := make(engine.Projects, 0, len(s.projects))
+	project := engine.Project(s.wildcardItem)
 
 	var err error
 	var allowed bool
-	for _, project := range s.projects {
-		for _, subject := range *subjects {
-			if allowed, err = s.enforcer.EnforceWithMatcher(authorizedProjectsMatcher, string(subject), wildcardItem, wildcardItem, string(project)); err != nil {
-				//fmt.Println(allowed, err)
-				return nil, err
-			} else if allowed {
-				result = append(result, project)
-			}
-		}
-	}
-
-	return result, nil
-}
-
-func (s *State) FilterAuthorizedPairs(ctx context.Context) (engine.Pairs, error) {
-	claims, ok := engine.AuthClaimsFromContext(ctx)
-	if !ok {
-		return nil, engine.ErrMissingAuthClaims
-	}
-
-	if claims.Subjects == nil || claims.Pairs == nil {
-		return nil, engine.ErrInvalidClaims
-	}
-
-	subjects := claims.Subjects
-	pairs := claims.Pairs
-
-	result := make(engine.Pairs, 0, len(*pairs))
-
-	var err error
-	var allowed bool
-	for _, p := range *pairs {
-		for _, subject := range *subjects {
-			if allowed, err = s.enforcer.Enforce(string(subject), string(p.Resource), string(p.Action), wildcardItem); err != nil {
+	for _, p := range pairs {
+		for _, subject := range subjects {
+			if allowed, err = s.enforcer.Enforce(string(subject), string(p.Resource), string(p.Action), string(project)); err != nil {
 				//fmt.Println(allowed, err)
 				return nil, err
 			} else if allowed {
@@ -143,26 +89,36 @@ func (s *State) FilterAuthorizedPairs(ctx context.Context) (engine.Pairs, error)
 	return result, nil
 }
 
-func (s *State) IsAuthorized(ctx context.Context) (bool, error) {
-	claims, ok := engine.AuthClaimsFromContext(ctx)
-	if !ok {
-		return false, engine.ErrMissingAuthClaims
+func (s *State) FilterAuthorizedProjects(_ context.Context, subjects engine.Subjects) (engine.Projects, error) {
+	result := make(engine.Projects, 0, len(s.projects))
+
+	resource := engine.Resource(s.wildcardItem)
+	action := engine.Action(s.wildcardItem)
+
+	var err error
+	var allowed bool
+	for _, project := range s.projects {
+		for _, subject := range subjects {
+			if allowed, err = s.enforcer.EnforceWithMatcher(s.authorizedProjectsMatcher, string(subject), string(resource), string(action), string(project)); err != nil {
+				//fmt.Println(allowed, err)
+				return nil, err
+			} else if allowed {
+				result = append(result, project)
+			}
+		}
 	}
 
-	if claims.Subject == nil || claims.Resource == nil || claims.Action == nil {
-		return false, engine.ErrInvalidClaims
-	}
+	return result, nil
+}
 
-	var project string
-	if claims.Project == nil {
-		project = wildcardItem
-	} else if len(*claims.Project) > 0 {
-		project = string(*claims.Project)
+func (s *State) IsAuthorized(_ context.Context, subject engine.Subject, action engine.Action, resource engine.Resource, project engine.Project) (bool, error) {
+	if len(project) == 0 {
+		project = engine.Project(s.wildcardItem)
 	}
 
 	var err error
 	var allowed bool
-	if allowed, err = s.enforcer.Enforce(string(*claims.Subject), string(*claims.Resource), string(*claims.Action), project); err != nil {
+	if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
 		//fmt.Println(allowed, err)
 		return false, err
 	} else if allowed {

@@ -9,22 +9,22 @@ var _ engine.Engine = (*State)(nil)
 
 type State struct{}
 
-func (s State) ProjectsAuthorized(context.Context) (engine.Projects, error) {
+func (s State) ProjectsAuthorized(_ context.Context, _ engine.Subjects, _ engine.Action, _ engine.Resource, _ engine.Projects) (engine.Projects, error) {
 	return engine.Projects{}, nil
 }
 
-func (s State) FilterAuthorizedPairs(context.Context) (engine.Pairs, error) {
+func (s State) FilterAuthorizedPairs(_ context.Context, _ engine.Subjects, _ engine.Pairs) (engine.Pairs, error) {
 	return engine.Pairs{}, nil
 }
 
-func (s State) FilterAuthorizedProjects(context.Context) (engine.Projects, error) {
+func (s State) FilterAuthorizedProjects(_ context.Context, _ engine.Subjects) (engine.Projects, error) {
 	return engine.Projects{}, nil
 }
 
-func (s State) IsAuthorized(context.Context) (bool, error) {
+func (s State) IsAuthorized(_ context.Context, _ engine.Subject, _ engine.Action, _ engine.Resource, _ engine.Project) (bool, error) {
 	return true, nil
 }
 
-func (s State) SetPolicies(context.Context, map[string]interface{}, map[string]interface{}) error {
+func (s State) SetPolicies(_ context.Context, _ map[string]interface{}, _ map[string]interface{}) error {
 	return nil
 }

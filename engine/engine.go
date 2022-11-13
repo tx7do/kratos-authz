@@ -10,13 +10,13 @@ type Engine interface {
 }
 
 type Authorizer interface {
-	ProjectsAuthorized(context.Context) (Projects, error)
+	ProjectsAuthorized(context.Context, Subjects, Action, Resource, Projects) (Projects, error)
 
-	FilterAuthorizedPairs(context.Context) (Pairs, error)
+	FilterAuthorizedPairs(context.Context, Subjects, Pairs) (Pairs, error)
 
-	FilterAuthorizedProjects(context.Context) (Projects, error)
+	FilterAuthorizedProjects(context.Context, Subjects) (Projects, error)
 
-	IsAuthorized(context.Context) (bool, error)
+	IsAuthorized(context.Context, Subject, Action, Resource, Project) (bool, error)
 }
 
 type Writer interface {

@@ -9,14 +9,14 @@ import (
 	"github.com/tx7do/kratos-authz/engine"
 )
 
-type contextKey string
-
 const (
 	reason string = "FORBIDDEN"
 )
 
 var (
-	ErrUnauthorized = errors.Forbidden(reason, "unauthorized access")
+	ErrUnauthorized  = errors.Forbidden(reason, "unauthorized access")
+	ErrMissingClaims = errors.Forbidden(reason, "missing authz claims")
+	ErrInvalidClaims = errors.Forbidden(reason, "invalid authz claims")
 )
 
 func Server(authorizer engine.Authorizer, opts ...Option) middleware.Middleware {
@@ -37,7 +37,23 @@ func Server(authorizer engine.Authorizer, opts ...Option) middleware.Middleware 
 				err     error
 			)
 
-			allowed, err = authorizer.IsAuthorized(ctx)
+			claims, ok := engine.AuthClaimsFromContext(ctx)
+			if !ok {
+				return nil, ErrMissingClaims
+			}
+
+			if claims.Subject == nil || claims.Action == nil || claims.Resource == nil {
+				return nil, ErrInvalidClaims
+			}
+
+			var project engine.Project
+			if claims.Project == nil {
+				project = ""
+			} else {
+				project = *claims.Project
+			}
+
+			allowed, err = authorizer.IsAuthorized(ctx, *claims.Subject, *claims.Action, *claims.Resource, project)
 			if err != nil {
 				return nil, err
 			}

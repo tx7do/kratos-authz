@@ -2,8 +2,6 @@ module github.com/tx7do/kratos-authz/engine/opa
 
 go 1.19
 
-replace github.com/tx7do/kratos-authz => ../../
-
 require (
 	github.com/go-kratos/kratos/v2 v2.5.3
 	github.com/mitchellh/mapstructure v1.5.0
@@ -11,7 +9,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/stretchr/testify v1.8.1
-	github.com/tx7do/kratos-authz v0.0.0-00010101000000-000000000000
+	github.com/tx7do/kratos-authz v0.0.1
 )
 
 require (
@@ -33,3 +31,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/tx7do/kratos-authz => ../../

@@ -20,5 +20,5 @@ type Authorizer interface {
 }
 
 type Writer interface {
-	SetPolicies(ctx context.Context, policyMap map[string]interface{}, roleMap map[string]interface{}) error
+	SetPolicies(context.Context, PolicyMap, RoleMap) error
 }

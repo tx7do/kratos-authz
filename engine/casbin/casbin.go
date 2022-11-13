@@ -127,7 +127,7 @@ func (s *State) IsAuthorized(_ context.Context, subject engine.Subject, action e
 	return false, nil
 }
 
-func (s *State) SetPolicies(_ context.Context, policyMap map[string]interface{}, _ map[string]interface{}) error {
+func (s *State) SetPolicies(_ context.Context, policyMap engine.PolicyMap, _ engine.RoleMap) error {
 	s.policy.SetPolicies(policyMap)
 	err := s.enforcer.LoadPolicy()
 	//fmt.Println(err, s.enforcer.GetAllSubjects(), s.enforcer.GetAllRoles())

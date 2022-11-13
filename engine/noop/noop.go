@@ -25,6 +25,6 @@ func (s State) IsAuthorized(_ context.Context, _ engine.Subject, _ engine.Action
 	return true, nil
 }
 
-func (s State) SetPolicies(_ context.Context, _ map[string]interface{}, _ map[string]interface{}) error {
+func (s State) SetPolicies(_ context.Context, _ engine.PolicyMap, _ engine.RoleMap) error {
 	return nil
 }

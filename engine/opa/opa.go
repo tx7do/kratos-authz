@@ -154,7 +154,7 @@ func (s *State) IsAuthorized(ctx context.Context, subject engine.Subject, action
 	}
 }
 
-func (s *State) SetPolicies(ctx context.Context, policyMap map[string]interface{}, roleMap map[string]interface{}) error {
+func (s *State) SetPolicies(ctx context.Context, policyMap engine.PolicyMap, roleMap engine.RoleMap) error {
 	s.store = inmem.NewFromObject(map[string]interface{}{
 		"policies": policyMap,
 		"roles":    roleMap,

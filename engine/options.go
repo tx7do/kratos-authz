@@ -47,3 +47,6 @@ func MakePair(res, act string) Pair {
 func MakePairs(pairs ...Pair) Pairs {
 	return pairs
 }
+
+type PolicyMap map[string]interface{}
+type RoleMap map[string]interface{}

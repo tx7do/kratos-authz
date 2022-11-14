@@ -104,7 +104,7 @@ func (c *Client) restCreateRelationTuple(ctx context.Context, namespace, object,
 	relationQuery.SetSubjectId(subject)
 	_, r, err := c.writeClient.WriteApi.CreateRelationTuple(ctx).RelationQuery(relationQuery).Execute()
 	if err != nil {
-		log.Errorf("Full HTTP response: %s\n", r.Body)
+		log.Errorf("restCreateRelationTuple error: [%s][%v]", err.Error(), r)
 		return err
 	}
 
@@ -119,7 +119,7 @@ func (c *Client) restGetCheck(ctx context.Context, namespace, object, relation, 
 		SubjectId(subject).
 		Execute()
 	if err != nil {
-		log.Errorf("Full HTTP response: %v\n", r)
+		log.Errorf("restGetCheck error: [%s][%v]", err.Error(), r)
 		return false, err
 	}
 
@@ -141,7 +141,7 @@ func (c *Client) grpcCreateRelationTuple(ctx context.Context, namespace, object,
 		},
 	})
 	if err != nil {
-		log.Errorf("Full GRPC response: %v\n", response)
+		log.Errorf("grpcCreateRelationTuple error: [%s][%v]", err.Error(), response)
 	}
 	return err
 }
@@ -156,7 +156,7 @@ func (c *Client) grpcGetCheck(ctx context.Context, namespace, object, relation, 
 		},
 	})
 	if err != nil {
-		log.Errorf("Full GRPC response: %v\n", response)
+		log.Errorf("grpcGetCheck error: [%s][%v]", err.Error(), response)
 		return false, err
 	}
 	return response.Allowed, nil

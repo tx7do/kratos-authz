@@ -46,34 +46,34 @@ func doTestData(t *testing.T, cli *Client) {
 		namespace string
 		object    string
 		relation  string
-		subjectId string
+		subject   string
 		allowed   bool
 	}{
 		{
 			namespace: "app",
 			object:    "my-first-blog-post",
 			relation:  "read",
-			subjectId: "alice",
+			subject:   "alice",
 			allowed:   true,
 		},
 		{
 			namespace: "app1",
 			object:    "my-first-blog-post",
 			relation:  "read",
-			subjectId: "alice",
+			subject:   "alice",
 			allowed:   false,
 		},
 		{
 			namespace: "app",
 			object:    "obj1",
 			relation:  "read",
-			subjectId: "alice",
+			subject:   "alice",
 			allowed:   false,
 		},
 	}
 	for _, test := range testDatas {
 		t.Run(test.object, func(t *testing.T) {
-			allowed, err := cli.GetCheck(ctx, test.namespace, test.object, test.relation, test.subjectId)
+			allowed, err := cli.GetCheck(ctx, test.namespace, test.object, test.relation, test.subject)
 			assert.Nil(t, err)
 			assert.Equal(t, test.allowed, allowed)
 		})

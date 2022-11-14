@@ -2,6 +2,7 @@ package openfga
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/go-kratos/kratos/v2/log"
 	openfga "github.com/openfga/go-sdk"
 	"github.com/openfga/go-sdk/credentials"
@@ -47,7 +48,7 @@ func (c *Client) createApiClient(scheme, host, storeId, token string) error {
 	return nil
 }
 
-func (c *Client) GetCheck(object, relation, subject string) (bool, error) {
+func (c *Client) GetCheck(ctx context.Context, object, relation, subject string) (bool, error) {
 	body := openfga.CheckRequest{
 		TupleKey: &openfga.TupleKey{
 			User:     openfga.PtrString(subject),
@@ -55,9 +56,9 @@ func (c *Client) GetCheck(object, relation, subject string) (bool, error) {
 			Object:   openfga.PtrString(object),
 		},
 	}
-	data, response, err := c.apiClient.OpenFgaApi.Check(context.Background()).Body(body).Execute()
+	data, response, err := c.apiClient.OpenFgaApi.Check(ctx).Body(body).Execute()
 	if err != nil {
-		log.Errorf("GetCheck error: %v\n", response)
+		log.Errorf("GetCheck error: [%s][%v]", err.Error(), response)
 		return false, err
 	}
 
@@ -67,7 +68,7 @@ func (c *Client) GetCheck(object, relation, subject string) (bool, error) {
 func (c *Client) ListStore(ctx context.Context) (*[]openfga.Store, error) {
 	stores, response, err := c.apiClient.OpenFgaApi.ListStores(ctx).Execute()
 	if err != nil {
-		log.Errorf("ListStore error: [%s][%v]\n", err.Error(), response)
+		log.Errorf("ListStore error: [%s][%v]", err.Error(), response)
 		return nil, err
 	}
 	//log.Infof("%v", stores.Stores)
@@ -77,7 +78,7 @@ func (c *Client) ListStore(ctx context.Context) (*[]openfga.Store, error) {
 func (c *Client) GetStore(ctx context.Context) string {
 	store, response, err := c.apiClient.OpenFgaApi.GetStore(ctx).Execute()
 	if err != nil {
-		log.Errorf("GetStore error [%s][%v]\n", err.Error(), response)
+		log.Errorf("GetStore error [%s][%v]", err.Error(), response)
 		return ""
 	}
 	return store.GetId()
@@ -90,7 +91,7 @@ func (c *Client) CreateStore(ctx context.Context, name string) error {
 		}).
 		Execute()
 	if err != nil {
-		log.Errorf("CreateStore error: [%s][%v]\n", err.Error(), response)
+		log.Errorf("CreateStore error: [%s][%v]", err.Error(), response)
 		return err
 	}
 
@@ -99,11 +100,11 @@ func (c *Client) CreateStore(ctx context.Context, name string) error {
 	return nil
 }
 
-func (c *Client) DeleteStore(ctx context.Context) error {
+func (c *Client) DeleteStore() error {
 	body := openfga.ApiDeleteStoreRequest{}
 	response, err := c.apiClient.OpenFgaApi.DeleteStoreExecute(body)
 	if err != nil {
-		log.Errorf("DeleteStore error: [%s][%v]\n", err.Error(), response)
+		log.Errorf("DeleteStore error: [%s][%v]", err.Error(), response)
 		return err
 	}
 	return nil
@@ -111,4 +112,74 @@ func (c *Client) DeleteStore(ctx context.Context) error {
 
 func (c *Client) SetStoreId(id string) {
 	c.apiClient.SetStoreId(id)
+}
+
+func (c *Client) CreateRelationTuple(ctx context.Context, object, relation, subject string) error {
+	body := openfga.WriteRequest{
+		Writes: &openfga.TupleKeys{
+			TupleKeys: []openfga.TupleKey{
+				{
+					User:     openfga.PtrString(subject),
+					Relation: openfga.PtrString(relation),
+					Object:   openfga.PtrString(object),
+				},
+			},
+		},
+	}
+	_, response, err := c.apiClient.OpenFgaApi.Write(ctx).Body(body).Execute()
+	if err != nil {
+		log.Errorf("CreateRelationTuple error: [%s][%v]", err.Error(), response)
+		return err
+	}
+	return nil
+}
+
+func (c *Client) DeleteRelationTuple(ctx context.Context, object, relation, subject string) error {
+	body := openfga.WriteRequest{
+		Deletes: &openfga.TupleKeys{
+			TupleKeys: []openfga.TupleKey{
+				{
+					User:     openfga.PtrString(subject),
+					Relation: openfga.PtrString(relation),
+					Object:   openfga.PtrString(object),
+				},
+			},
+		},
+	}
+	_, response, err := c.apiClient.OpenFgaApi.Write(ctx).Body(body).Execute()
+	if err != nil {
+		log.Errorf("DeleteRelationTuple error: [%s][%v]", err.Error(), response)
+		return err
+	}
+	return nil
+}
+
+func (c *Client) ExpandRelationTuple(ctx context.Context, object, relation string) error {
+	body := openfga.ExpandRequest{
+		TupleKey: &openfga.TupleKey{
+			Relation: openfga.PtrString(relation),
+			Object:   openfga.PtrString(object),
+		},
+	}
+	_, response, err := c.apiClient.OpenFgaApi.Expand(ctx).Body(body).Execute()
+	if err != nil {
+		log.Errorf("ExpandRelationTuple error: [%s][%v]", err.Error(), response)
+		return err
+	}
+	return nil
+}
+
+func (c *Client) CreateAuthorizationModel(ctx context.Context, writeAuthorizationModelRequestString string) (string, error) {
+	var body openfga.WriteAuthorizationModelRequest
+	if err := json.Unmarshal([]byte(writeAuthorizationModelRequestString), &body); err != nil {
+		return "", err
+	}
+
+	data, response, err := c.apiClient.OpenFgaApi.WriteAuthorizationModel(ctx).Body(body).Execute()
+	if err != nil {
+		log.Errorf("CreateAuthorizationModel error: [%s][%v]", err.Error(), response)
+		return "", err
+	}
+
+	return data.GetAuthorizationModelId(), nil
 }

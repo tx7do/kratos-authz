@@ -2,9 +2,10 @@ package openfga
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestClient(t *testing.T) {
@@ -38,8 +39,8 @@ func TestClient(t *testing.T) {
 
 	doTestData(t, cli)
 
-	err = cli.DeleteRelationTuple(ctx, "document:Z", "reader", "user:anne")
-	assert.Nil(t, err)
+	//err = cli.DeleteRelationTuple(ctx, "document:Z", "reader", "user:anne")
+	//assert.Nil(t, err)
 }
 
 func doTestData(t *testing.T, cli *Client) {

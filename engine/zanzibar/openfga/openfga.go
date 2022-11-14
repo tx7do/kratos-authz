@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/uuid"
 	openfga "github.com/openfga/go-sdk"
 	"github.com/openfga/go-sdk/credentials"
 )
@@ -19,7 +20,30 @@ func NewClient(scheme, host, storeId, token string) *Client {
 		return nil
 	}
 
+	if cli.ensureStore(context.Background()) != nil {
+		return nil
+	}
+
 	return cli
+}
+
+func (c *Client) ensureStore(ctx context.Context) error {
+	stores, err := c.ListStore(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if stores == nil || len(*stores) == 0 {
+		_uuid := uuid.New()
+		storeName := _uuid.String()
+		err = c.CreateStore(ctx, storeName)
+		if err != nil {
+			return err
+		}
+	} else {
+		c.SetStoreId((*stores)[len(*stores)-1].GetId())
+	}
+	return nil
 }
 
 func (c *Client) createApiClient(scheme, host, storeId, token string) error {

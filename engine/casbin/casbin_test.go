@@ -26,6 +26,7 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 	ctx := context.Background()
 	s, err := New(ctx)
 	assert.Nil(t, err)
+	assert.NotNil(t, s)
 
 	policies := map[string]interface{}{
 		"policies": []PolicyRule{
@@ -100,6 +101,7 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 	ctx := context.Background()
 	s, err := New(ctx)
 	assert.Nil(t, err)
+	assert.NotNil(t, s)
 
 	policies := map[string]interface{}{
 		"policies": []PolicyRule{
@@ -157,6 +159,7 @@ func TestProjectsAuthorized(t *testing.T) {
 	ctx := context.Background()
 	s, err := New(ctx)
 	assert.Nil(t, err)
+	assert.NotNil(t, s)
 
 	policies := map[string]interface{}{
 		"policies": []PolicyRule{

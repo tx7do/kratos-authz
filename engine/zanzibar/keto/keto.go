@@ -3,13 +3,15 @@ package keto
 import (
 	"context"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+
 	"github.com/go-kratos/kratos/v2/log"
 
 	client "github.com/ory/keto-client-go"
 	acl "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client struct {
@@ -156,6 +158,10 @@ func (c *Client) grpcGetCheck(ctx context.Context, namespace, object, relation, 
 		},
 	})
 	if err != nil {
+		// If namespace doesn't exist, we'll catch the Not Round error.
+		if status.Code(err) == codes.NotFound {
+			return false, nil
+		}
 		log.Errorf("grpcGetCheck error: [%s][%v]", err.Error(), response)
 		return false, err
 	}

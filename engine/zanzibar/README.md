@@ -86,6 +86,143 @@ file2#access@(file2#owner)
 
 ## 什么是 ReBAC？
 
+
+## Ory Keto
+
+- [官方网站](https://www.ory.sh/keto/)
+- [Github代码库](https://github.com/ory/keto-client-go)
+- [官方文档](https://www.ory.sh/docs/keto/sdk/go)
+
+### 安装部署Keto服务
+
+具体文档可见：<https://www.ory.sh/docs/keto/install>
+
+最基本的keto.yml
+
+```yaml
+version: v0.10.0-alpha.0
+
+log:
+  level: debug
+
+namespaces:
+  - id: 0
+    name: app
+
+serve:
+  read:
+    host: 0.0.0.0
+    port: 4466
+  write:
+    host: 0.0.0.0
+    port: 4467
+
+dsn: memory
+```
+
+需要注意的是，新的版本当中，必须要有namespaces的定义，不然启动不了。
+
+### Docker
+
+#### 直接docker run启动
+
+```powershell
+docker pull oryd/keto:latest
+
+docker run -itd --name keto-server `
+    -p 4466:4466 -p 4467:4467 `
+    -v /d/keto.yml:/home/ory/keto.yml `
+    oryd/keto:latest serve -c /home/ory/keto.yml
+```
+
+需要注意的是，我把宿主的keto.yml直接挂载上去了，不然启动不了。
+
+#### docker-compose启动
+
+```yaml
+version: "3"
+
+services:
+  keto:
+    image: oryd/keto:v0.10.0-alpha.0
+    ports:
+      - "4466:4466"
+      - "4467:4467"
+    command: serve -c /home/ory/keto.yml
+    restart: on-failure
+    volumes:
+      - type: bind
+        source: .
+        target: /home/ory
+```
+
+### Linux
+
+```shell
+bash <(curl https://raw.githubusercontent.com/ory/meta/master/install.sh) -d -b . keto v0.10.0-alpha.0
+./keto help
+```
+
+### macOS
+
+```shell
+brew install ory/tap/keto
+keto help
+```
+
+### Windows
+
+```shell
+irm get.scoop.sh | iex
+
+scoop bucket add ory https://github.com/ory/scoop.git
+scoop install keto
+
+keto help
+```
+
+我尝试了使用sqlite启动，结果说没有支持：`could not create new connection: sqlite3 support was not compiled into the binary stack_trace`
+
+### Kubernetes
+
+```shell
+helm repo add ory https://k8s.ory.sh/helm/charts
+helm repo update
+```
+
+### 安装SDK
+
+#### 安装gRPC API
+
+```shell
+go get github.com/ory/keto/proto@v0.10.0-alpha.0
+```
+
+#### 安装REST API
+
+```shell
+go get github.com/ory/keto-client-go@v0.10.0-alpha.0
+```
+
+## OpenFGA
+
+Docker安装
+
+```shell
+docker pull openfga/openfga:latest
+
+docker run -itd --name openfga-server `
+  -p 8080:8080 `
+  -p 8081:8081 `
+  -p 3000:3000 `
+  openfga/openfga:latest run
+```
+
+其中，8080是GRPC的接口，8081是HTTP的接口。
+
+3000 提供了playground：<http://localhost:3000/playground>
+
+
 ## 参考资料
 
 - [Zanzibar: Google’s Consistent, Global Authorization System](https://research.google/pubs/pub48190/)
@@ -102,3 +239,4 @@ file2#access@(file2#owner)
 - [Relationship-Based Access Control (ReBAC)](https://www.osohq.com/academy/relationship-based-access-control-rebac)
 - [详解微服务中的三种授权模式](https://www.infoq.cn/article/rl6g3buvaal8aiwvugdf)
 - [Announcing OpenFGA - Auth0’s Open Source Fine Grained Authorization System](https://auth0.com/blog/auth0s-openfga-open-source-fine-grained-authorization-system/)
+- [如何使用 Ory Kratos 和 Ory Keto 保护您的烧瓶应用程序](https://devpress.csdn.net/python/62f99ab8c6770329307fef6d.html)

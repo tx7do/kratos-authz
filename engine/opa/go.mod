@@ -9,7 +9,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/stretchr/testify v1.8.1
-	github.com/tx7do/kratos-authz v0.0.1
+	github.com/tx7do/kratos-authz v0.0.2
 )
 
 require (

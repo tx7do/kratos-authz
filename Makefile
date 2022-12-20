@@ -1,6 +1,6 @@
 APP_VERSION=v0.0.1
 
-PACKAGE_LIST = engine/opa/ engine/noop/ engine/casbin/ authz/
+PACKAGE_LIST = engine/opa/ engine/casbin/ engine/zanzibar/ middleware/
 
 .PHONY: tag
 tag:

@@ -43,3 +43,9 @@ func WithFileModel(path string) OptFunc {
 		s.model, _ = model.NewModelFromFile(path)
 	}
 }
+
+func WithPolicyAdapter(policy *Adapter) OptFunc {
+	return func(s *State) {
+		s.policy = policy
+	}
+}

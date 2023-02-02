@@ -74,7 +74,7 @@ func (c *Client) createApiClient(scheme, host, storeId, token string) error {
 
 func (c *Client) GetCheck(ctx context.Context, object, relation, subject string) (bool, error) {
 	body := openfga.CheckRequest{
-		TupleKey: &openfga.TupleKey{
+		TupleKey: openfga.TupleKey{
 			User:     openfga.PtrString(subject),
 			Relation: openfga.PtrString(relation),
 			Object:   openfga.PtrString(object),
@@ -111,7 +111,7 @@ func (c *Client) GetStore(ctx context.Context) string {
 func (c *Client) CreateStore(ctx context.Context, name string) error {
 	store, response, err := c.apiClient.OpenFgaApi.CreateStore(ctx).
 		Body(openfga.CreateStoreRequest{
-			Name: openfga.PtrString(name),
+			Name: name,
 		}).
 		Execute()
 	if err != nil {
@@ -180,7 +180,7 @@ func (c *Client) DeleteRelationTuple(ctx context.Context, object, relation, subj
 
 func (c *Client) ExpandRelationTuple(ctx context.Context, object, relation string) error {
 	body := openfga.ExpandRequest{
-		TupleKey: &openfga.TupleKey{
+		TupleKey: openfga.TupleKey{
 			Relation: openfga.PtrString(relation),
 			Object:   openfga.PtrString(object),
 		},

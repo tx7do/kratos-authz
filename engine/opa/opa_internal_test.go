@@ -813,7 +813,7 @@ func specificInput(subjects engine.Subjects, resource string, action string, pro
 }
 
 func baselineAndRandomPoliciesAndRoles(customPolicyCount int, customRoleCount int) (policies map[string]interface{}, roles map[string]interface{}) {
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// set lists of potential members and actions to be used to randomly generate custom policy contents
 	members := engine.MakeSubjects("user:local:admin", "team:*", "team:local:sec", "team:local:admin", "user:ldap:*", "token:*", "user:local:test")
@@ -979,7 +979,7 @@ func baselineAndProjectPolicies(count int) (policies map[string]interface{}, pro
 }
 
 func allRoles(count int, actions engine.Actions, chefRoles map[string]interface{}) map[string]interface{} {
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// first we add chef-managed roles to the map
 	allRoleCount := len(chefRoles) + count

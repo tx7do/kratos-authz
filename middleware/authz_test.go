@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-kratos/kratos/v2/middleware"
-	"github.com/go-kratos/kratos/v2/transport"
-	"github.com/tx7do/kratos-authz/engine"
-	"github.com/tx7do/kratos-authz/engine/opa"
 	"io"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/go-kratos/kratos/v2/middleware"
+	"github.com/go-kratos/kratos/v2/transport"
+
+	"github.com/tx7do/kratos-authz/engine"
 	"github.com/tx7do/kratos-authz/engine/casbin"
+	"github.com/tx7do/kratos-authz/engine/opa"
 )
 
 type myTransport struct {

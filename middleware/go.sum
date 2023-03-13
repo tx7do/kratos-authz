@@ -74,10 +74,10 @@ github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ
 github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/tchap/go-patricia/v2 v2.3.1 h1:6rQp39lgIYZ+MHmdEq4xzuk1t7OdC35z/xm0BGhTkes=
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
-github.com/tx7do/kratos-authz/engine/casbin v0.0.0-20230216134644-a8796a116ab5 h1:Z4ngn8Z537g5zv4k/k2vo267X2M4C7mC1PnYPJKQdNI=
-github.com/tx7do/kratos-authz/engine/casbin v0.0.0-20230216134644-a8796a116ab5/go.mod h1:WkdgwVGRBUBimYXo+SfMbiEyyR3T7DQaQzsfSzmf8pE=
-github.com/tx7do/kratos-authz/engine/opa v0.0.0-20230216134644-a8796a116ab5 h1:OHX+lL1U7LTslqUS5mhJN/aYmllX0VizPCE31/v+nmc=
-github.com/tx7do/kratos-authz/engine/opa v0.0.0-20230216134644-a8796a116ab5/go.mod h1:Iu7qyhPuBwOeNG3KI/akjxa4HkpNjKRIWrgwRDZfw+I=
+github.com/tx7do/kratos-authz/engine/casbin v0.0.0-20230313064147-69e25a22e932 h1:bUNe3OAS57QPTQz49Gujbcbuy9H/VDnXPfNxYGkkalA=
+github.com/tx7do/kratos-authz/engine/casbin v0.0.0-20230313064147-69e25a22e932/go.mod h1:gq7kn+SD7V+sYDPAOOzzqSgqGQaZ5y4RGVAws2gJgfg=
+github.com/tx7do/kratos-authz/engine/opa v0.0.0-20230313064147-69e25a22e932 h1:JK94l1eLeweXIZV/Od4xrA6z7gHhN4qBv9kB2FCu6gQ=
+github.com/tx7do/kratos-authz/engine/opa v0.0.0-20230313064147-69e25a22e932/go.mod h1:NuaxG7Gy/pd7t6tNHvM+9rhdL44UYiWzwl8rS5P05R0=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 h1:EzJWgHovont7NscjpAxXsDA8S8BMYve8Y5+7cuRE7R0=

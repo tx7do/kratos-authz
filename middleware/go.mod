@@ -6,8 +6,8 @@ require (
 	github.com/go-kratos/kratos/v2 v2.6.1
 	github.com/stretchr/testify v1.8.2
 	github.com/tx7do/kratos-authz v0.0.4
-	github.com/tx7do/kratos-authz/engine/casbin v0.0.0-20230216134644-a8796a116ab5
-	github.com/tx7do/kratos-authz/engine/opa v0.0.0-20230216134644-a8796a116ab5
+	github.com/tx7do/kratos-authz/engine/casbin v0.0.0-20230313064147-69e25a22e932
+	github.com/tx7do/kratos-authz/engine/opa v0.0.0-20230313064147-69e25a22e932
 )
 
 require (

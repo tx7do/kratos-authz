@@ -20,7 +20,7 @@ require (
 	github.com/go-playground/form/v4 v4.2.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/open-policy-agent/opa v0.49.2 // indirect
+	github.com/open-policy-agent/opa v0.50.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect

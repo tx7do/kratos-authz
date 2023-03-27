@@ -2,7 +2,7 @@ module github.com/tx7do/kratos-authz
 
 go 1.19
 
-require google.golang.org/grpc v1.53.0
+require google.golang.org/grpc v1.54.0
 
 require (
 	github.com/golang/protobuf v1.5.3 // indirect

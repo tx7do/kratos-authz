@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/casbin/casbin/v2 v2.77.2
 	github.com/stretchr/testify v1.8.4
-	github.com/tx7do/kratos-authz v0.0.4
+	github.com/tx7do/kratos-authz v1.0.0
 )
 
 require (
@@ -16,8 +16,8 @@ require (
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect
-	google.golang.org/grpc v1.58.2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231016165738-49dd2c1f3d0b // indirect
+	google.golang.org/grpc v1.59.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

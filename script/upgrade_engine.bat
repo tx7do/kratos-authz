@@ -14,5 +14,3 @@ for /R %DIR% /d %%i in (*) do (
 cd ..\..\middleware\
 go get all
 go mod tidy
-
-pause

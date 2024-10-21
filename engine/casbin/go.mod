@@ -7,7 +7,7 @@ toolchain go1.23.2
 require (
 	github.com/casbin/casbin/v2 v2.100.0
 	github.com/stretchr/testify v1.9.0
-	github.com/tx7do/kratos-authz v1.0.0
+	github.com/tx7do/kratos-authz v1.0.1
 )
 
 require (

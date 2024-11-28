@@ -10,7 +10,10 @@ import (
 
 func TestClient(t *testing.T) {
 	ctx := context.Background()
-	cli := NewClient("http", "127.0.0.1:8080", "", "")
+	cli := NewClient(
+		WithApiUrl("127.0.0.1:8080"),
+		WithToken(""),
+	)
 	assert.NotNil(t, cli)
 
 	stores, err := cli.ListStore(ctx)
@@ -25,7 +28,7 @@ func TestClient(t *testing.T) {
 			t.Logf("id: %s name:%s", store.GetId(), store.GetName())
 		}
 
-		cli.SetStoreId((*stores)[len(*stores)-1].GetId())
+		_ = cli.SetStoreId((*stores)[len(*stores)-1].GetId())
 		//_ = cli.DeleteStore(ctx)
 	}
 

@@ -2,9 +2,10 @@ package zanzibar
 
 import (
 	"context"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/tx7do/kratos-authz/engine"
-	"testing"
 )
 
 func TestOpenFga(t *testing.T) {

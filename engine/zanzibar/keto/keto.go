@@ -46,7 +46,7 @@ func (c *Client) GetCheck(ctx context.Context, namespace, object, relation, subj
 	if c.useGRPC {
 		return c.grpcGetCheck(ctx, namespace, object, relation, subject)
 	} else {
-		return c.restGetCheck(ctx, namespace, object, relation, subject)
+		return c.restCheckPermission(ctx, namespace, object, relation, subject)
 	}
 }
 
@@ -59,7 +59,7 @@ func (c *Client) CreateRelationTuple(ctx context.Context, namespace, object, rel
 }
 
 func (c *Client) createGrpcReadClient(uri string) {
-	conn, err := grpc.Dial(uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic("Encountered error: " + err.Error())
 	}
@@ -70,7 +70,7 @@ func (c *Client) createGrpcReadClient(uri string) {
 }
 
 func (c *Client) createGrpcWriteClient(uri string) {
-	conn, err := grpc.Dial(uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic("Encountered error: " + err.Error())
 	}
@@ -99,12 +99,15 @@ func (c *Client) createRestWriteClient(uri string) {
 }
 
 func (c *Client) restCreateRelationTuple(ctx context.Context, namespace, object, relation, subject string) error {
-	relationQuery := *client.NewRelationQuery()
+	relationQuery := *client.NewCreateRelationshipBody()
 	relationQuery.SetNamespace(namespace)
 	relationQuery.SetObject(object)
 	relationQuery.SetRelation(relation)
 	relationQuery.SetSubjectId(subject)
-	_, r, err := c.writeClient.WriteApi.CreateRelationTuple(ctx).RelationQuery(relationQuery).Execute()
+
+	_, r, err := c.writeClient.RelationshipApi.CreateRelationship(ctx).
+		CreateRelationshipBody(relationQuery).
+		Execute()
 	if err != nil {
 		log.Errorf("restCreateRelationTuple error: [%s][%v]", err.Error(), r)
 		return err
@@ -113,15 +116,15 @@ func (c *Client) restCreateRelationTuple(ctx context.Context, namespace, object,
 	return nil
 }
 
-func (c *Client) restGetCheck(ctx context.Context, namespace, object, relation, subject string) (bool, error) {
-	check, r, err := c.readClient.ReadApi.GetCheck(ctx).
+func (c *Client) restCheckPermission(ctx context.Context, namespace, object, relation, subject string) (bool, error) {
+	check, r, err := c.readClient.PermissionApi.CheckPermission(ctx).
 		Namespace(namespace).
 		Object(object).
 		Relation(relation).
 		SubjectId(subject).
 		Execute()
 	if err != nil {
-		log.Errorf("restGetCheck error: [%s][%v]", err.Error(), r)
+		log.Errorf("restCheckPermission error: [%s][%v]", err.Error(), r)
 		return false, err
 	}
 

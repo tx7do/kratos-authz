@@ -3,20 +3,9 @@ package middleware
 import (
 	"context"
 
-	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/middleware"
 
 	"github.com/tx7do/kratos-authz/engine"
-)
-
-const (
-	reason string = "FORBIDDEN"
-)
-
-var (
-	ErrUnauthorized  = errors.Forbidden(reason, "unauthorized access")
-	ErrMissingClaims = errors.Forbidden(reason, "missing authz claims")
-	ErrInvalidClaims = errors.Forbidden(reason, "invalid authz claims")
 )
 
 func Server(authorizer engine.Authorizer, opts ...Option) middleware.Middleware {

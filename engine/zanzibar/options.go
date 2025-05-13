@@ -13,8 +13,14 @@ func WithKeto(readUrl, writeUrl string, useGRPC bool) OptFunc {
 	}
 }
 
-func WithOpenFga(scheme, host, storeId, token string) OptFunc {
+func WithOpenFga(apiUrl, storeId, token, clientId string) OptFunc {
 	return func(s *State) {
-		s.openfgaClient = openfga.NewClient(scheme, host, storeId, token)
+
+		s.openfgaClient = openfga.NewClient(
+			openfga.WithApiUrl(apiUrl),
+			openfga.WithStoreId(storeId),
+			openfga.WithToken(token),
+			//openfga.WithClientId(clientId),
+		)
 	}
 }

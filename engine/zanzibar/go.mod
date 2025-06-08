@@ -11,7 +11,7 @@ require (
 	github.com/ory/keto-client-go v0.11.0-alpha.0
 	github.com/ory/keto/proto v0.13.0-alpha.0
 	github.com/stretchr/testify v1.10.0
-	github.com/tx7do/kratos-authz v1.1.3
+	github.com/tx7do/kratos-authz v1.1.4
 	google.golang.org/grpc v1.73.0
 )
 

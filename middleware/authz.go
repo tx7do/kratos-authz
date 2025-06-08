@@ -52,7 +52,7 @@ func Server(authorizer engine.Authorizer, opts ...Option) middleware.Middleware 
 				}
 			} else if claims.Subjects != nil && len(*claims.Subjects) > 0 {
 				for _, subject := range *claims.Subjects {
-					allowed, err = authorizer.IsAuthorized(ctx, subject, *claims.Action, *claims.Resource, project)
+					allowed, err = authorizer.IsAuthorized(ctx, engine.Subject(subject), *claims.Action, *claims.Resource, project)
 					if err != nil {
 						return nil, err
 					}

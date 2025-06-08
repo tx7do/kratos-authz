@@ -11,9 +11,9 @@ var (
 )
 
 type AuthClaims struct {
-	Subjects *Subjects
+	Subjects *[]string
 	Pairs    *Pairs
-	Projects *Projects
+	Projects *[]string
 
 	Subject  *Subject
 	Action   *Action

@@ -31,7 +31,7 @@ func Server(authorizer engine.Authorizer, opts ...Option) middleware.Middleware 
 				return nil, ErrMissingClaims
 			}
 
-			if claims.Subject == nil || claims.Action == nil || claims.Resource == nil {
+			if claims.Action == nil || claims.Resource == nil {
 				return nil, ErrInvalidClaims
 			}
 
@@ -42,12 +42,29 @@ func Server(authorizer engine.Authorizer, opts ...Option) middleware.Middleware 
 				project = *claims.Project
 			}
 
-			allowed, err = authorizer.IsAuthorized(ctx, *claims.Subject, *claims.Action, *claims.Resource, project)
-			if err != nil {
-				return nil, err
-			}
-			if !allowed {
-				return nil, ErrUnauthorized
+			if claims.Subject != nil {
+				allowed, err = authorizer.IsAuthorized(ctx, *claims.Subject, *claims.Action, *claims.Resource, project)
+				if err != nil {
+					return nil, err
+				}
+				if !allowed {
+					return nil, ErrUnauthorized
+				}
+			} else if claims.Subjects != nil && len(*claims.Subjects) > 0 {
+				for _, subject := range *claims.Subjects {
+					allowed, err = authorizer.IsAuthorized(ctx, subject, *claims.Action, *claims.Resource, project)
+					if err != nil {
+						return nil, err
+					}
+					if allowed {
+						break
+					}
+				}
+				if !allowed {
+					return nil, ErrUnauthorized
+				}
+			} else {
+				return nil, ErrMissingSubject
 			}
 
 			return handler(ctx, req)

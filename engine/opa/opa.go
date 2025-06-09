@@ -4,6 +4,7 @@ package opa
 //go:generate go-bindata -pkg $GOPACKAGE -o policy.bindata.go -ignore .*_test.rego -ignore Makefile -ignore README\.md policy/...
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,26 +31,29 @@ type State struct {
 	compiler             *ast.Compiler
 	modules              map[string]*ast.Module
 	preparedEvalProjects rego.PreparedEvalQuery
+
+	regoVersion       ast.RegoVersion
+	enableQueryTracer bool
+
+	authzProjectsQuery    string
+	filteredPairsQuery    string
+	filteredProjectsQuery string
+
+	log *log.Helper
 }
-
-const (
-	AuthzProjectsQueryKey    = "AuthzProjectsQuery"
-	FilteredPairsQueryKey    = "FilteredPairsQuery"
-	FilteredProjectsQueryKey = "FilteredProjectsQuery"
-)
-
-const (
-	defaultAuthzProjectsQuery    = "data.authz.authorized_project[project]"
-	defaultFilteredPairsQuery    = "data.authz.introspection.authorized_pair[_]"
-	defaultFilteredProjectsQuery = "data.authz.introspection.authorized_project"
-)
 
 func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	var err error
 
 	s := State{
-		store:   inmem.New(),
-		queries: make(map[string]ast.Body),
+		store:                 inmem.New(),
+		queries:               make(map[string]ast.Body),
+		log:                   log.NewHelper(log.With(log.DefaultLogger, "module", "opa.authz.engine")),
+		regoVersion:           ast.DefaultRegoVersion,
+		enableQueryTracer:     false,
+		authzProjectsQuery:    defaultAuthzProjectsQuery,
+		filteredPairsQuery:    defaultFilteredPairsQuery,
+		filteredProjectsQuery: defaultFilteredProjectsQuery,
 	}
 
 	if err = s.init(opts...); err != nil {
@@ -60,20 +64,14 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 }
 
 func (s *State) init(opts ...OptFunc) error {
+	var err error
+
 	for _, opt := range opts {
 		opt(s)
 	}
 
-	var err error
-
-	if err = s.ParseProjectsQuery(defaultAuthzProjectsQuery); err != nil {
-		return err
-	}
-	if err = s.ParseFilterPairsQuery(defaultFilteredPairsQuery); err != nil {
-		return err
-	}
-	if err = s.ParseFilterProjectsQuery(defaultFilteredProjectsQuery); err != nil {
-		return err
+	if err = s.initQueries(); err != nil {
+		return errors.Wrap(err, "init queries")
 	}
 
 	if err = s.initModules(); err != nil {
@@ -88,6 +86,12 @@ func (s *State) Name() string {
 }
 
 func (s *State) ParseProjectsQuery(query string) error {
+	if query == "" {
+		query = defaultAuthzProjectsQuery
+	}
+
+	s.authzProjectsQuery = query
+
 	authzProjectsQueryParsed, err := ast.ParseBody(query)
 	if err != nil {
 		return errors.Wrapf(err, "parse query %q", query)
@@ -103,6 +107,12 @@ func (s *State) ParseProjectsQuery(query string) error {
 }
 
 func (s *State) ParseFilterPairsQuery(query string) error {
+	if query == "" {
+		query = defaultFilteredPairsQuery
+	}
+
+	s.filteredPairsQuery = query
+
 	filteredPairsQueryParsed, err := ast.ParseBody(query)
 	if err != nil {
 		return errors.Wrapf(err, "parse query %q", query)
@@ -118,6 +128,12 @@ func (s *State) ParseFilterPairsQuery(query string) error {
 }
 
 func (s *State) ParseFilterProjectsQuery(query string) error {
+	if query == "" {
+		query = defaultFilteredProjectsQuery
+	}
+
+	s.filteredProjectsQuery = query
+
 	filteredProjectsQueryParsed, err := ast.ParseBody(query)
 	if err != nil {
 		return errors.Wrapf(err, "parse query %q", query)
@@ -303,6 +319,22 @@ func (s *State) doCompile() error {
 	return nil
 }
 
+func (s *State) initQueries() error {
+	var err error
+
+	if err = s.ParseProjectsQuery(s.authzProjectsQuery); err != nil {
+		return errors.Wrap(err, "parse projects query")
+	}
+	if err = s.ParseFilterPairsQuery(s.filteredPairsQuery); err != nil {
+		return errors.Wrap(err, "parse filter pairs query")
+	}
+	if err = s.ParseFilterProjectsQuery(s.filteredProjectsQuery); err != nil {
+		return errors.Wrap(err, "parse filter projects query")
+	}
+
+	return nil
+}
+
 func (s *State) initModules() error {
 	if len(s.modules) == 0 {
 		if err := s.InitModulesFromAssets(); err != nil {
@@ -330,6 +362,7 @@ func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
 		rego.DisableInlining([]string{
 			"data.authz.denied_project",
 		}),
+		rego.SetRegoVersion(s.regoVersion),
 	)
 
 	pq, err := r.Partial(ctx)
@@ -366,6 +399,7 @@ func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
 		rego.Store(s.store),
 		rego.Compiler(compiler),
 		rego.Query("data.__partialauthz.authorized_project[project]"),
+		rego.SetRegoVersion(s.regoVersion),
 	)
 
 	query, err := r2.PrepareForEval(ctx)
@@ -413,7 +447,9 @@ func dumpData(ctx context.Context, store storage.Store) error {
 
 func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}, store storage.Store) (rego.ResultSet, error) {
 	var tracer *topdown.BufferTracer
-	tracer = topdown.NewBufferTracer()
+	if s.enableQueryTracer {
+		tracer = topdown.NewBufferTracer()
+	}
 
 	rs, err := rego.New(
 		rego.ParsedQuery(query),
@@ -421,13 +457,16 @@ func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}
 		rego.Compiler(s.compiler),
 		rego.Store(store),
 		rego.QueryTracer(tracer),
+		rego.SetRegoVersion(s.regoVersion),
 	).Eval(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if tracer != nil && tracer.Enabled() {
-		topdown.PrettyTrace(os.Stderr, *tracer) //nolint: govet // tracer can be nil only if tracer.Enabled() == false
+		var buffer bytes.Buffer
+		topdown.PrettyTrace(&buffer, *tracer)
+		s.log.Debug(buffer.String())
 	}
 
 	return rs, nil

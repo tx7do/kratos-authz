@@ -23,3 +23,21 @@ func WithModulesFromString(modules map[string]string) OptFunc {
 		_ = s.InitModulesFromString(modules)
 	}
 }
+
+func WithProjectsAuthorizedQuery(query string) OptFunc {
+	return func(s *State) {
+		_ = s.ParseProjectsQuery(query)
+	}
+}
+
+func WithFilterAuthorizedPairsQuery(query string) OptFunc {
+	return func(s *State) {
+		_ = s.ParseFilterPairsQuery(query)
+	}
+}
+
+func WithFilterAuthorizedProjectsQuery(query string) OptFunc {
+	return func(s *State) {
+		_ = s.ParseFilterProjectsQuery(query)
+	}
+}

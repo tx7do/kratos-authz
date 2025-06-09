@@ -33,52 +33,112 @@ type State struct {
 }
 
 const (
-	authzProjectsQuery    = "data.authz.authorized_project[project]"
-	filteredPairsQuery    = "data.authz.introspection.authorized_pair[_]"
-	filteredProjectsQuery = "data.authz.introspection.authorized_project"
+	AuthzProjectsQueryKey    = "AuthzProjectsQuery"
+	FilteredPairsQueryKey    = "FilteredPairsQuery"
+	FilteredProjectsQueryKey = "FilteredProjectsQuery"
+)
+
+const (
+	defaultAuthzProjectsQuery    = "data.authz.authorized_project[project]"
+	defaultFilteredPairsQuery    = "data.authz.introspection.authorized_pair[_]"
+	defaultFilteredProjectsQuery = "data.authz.introspection.authorized_project"
 )
 
 func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
-	authzProjectsQueryParsed, err := ast.ParseBody(authzProjectsQuery)
-	if err != nil {
-		return nil, errors.Wrapf(err, "parse query %q", authzProjectsQuery)
-	}
-
-	filteredPairsQueryParsed, err := ast.ParseBody(filteredPairsQuery)
-	if err != nil {
-		return nil, errors.Wrapf(err, "parse query %q", filteredPairsQuery)
-	}
-
-	filteredProjectsQueryParsed, err := ast.ParseBody(filteredProjectsQuery)
-	if err != nil {
-		return nil, errors.Wrapf(err, "parse query %q", filteredProjectsQuery)
-	}
+	var err error
 
 	s := State{
-		store: inmem.New(),
-		queries: map[string]ast.Body{
-			authzProjectsQuery:    authzProjectsQueryParsed,
-			filteredPairsQuery:    filteredPairsQueryParsed,
-			filteredProjectsQuery: filteredProjectsQueryParsed,
-		},
+		store:   inmem.New(),
+		queries: make(map[string]ast.Body),
 	}
 
-	for _, opt := range opts {
-		opt(&s)
-	}
-
-	if err = s.initModules(); err != nil {
-		return nil, errors.Wrap(err, "init OPA modules")
+	if err = s.init(opts...); err != nil {
+		return nil, err
 	}
 
 	return &s, nil
+}
+
+func (s *State) init(opts ...OptFunc) error {
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	var err error
+
+	if err = s.ParseProjectsQuery(defaultAuthzProjectsQuery); err != nil {
+		return err
+	}
+	if err = s.ParseFilterPairsQuery(defaultFilteredPairsQuery); err != nil {
+		return err
+	}
+	if err = s.ParseFilterProjectsQuery(defaultFilteredProjectsQuery); err != nil {
+		return err
+	}
+
+	if err = s.initModules(); err != nil {
+		return errors.Wrap(err, "init OPA modules")
+	}
+
+	return nil
 }
 
 func (s *State) Name() string {
 	return string(engine.Opa)
 }
 
-func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {
+func (s *State) ParseProjectsQuery(query string) error {
+	authzProjectsQueryParsed, err := ast.ParseBody(query)
+	if err != nil {
+		return errors.Wrapf(err, "parse query %q", query)
+	}
+
+	if s.queries == nil {
+		s.queries = make(map[string]ast.Body)
+	}
+
+	s.queries[AuthzProjectsQueryKey] = authzProjectsQueryParsed
+
+	return nil
+}
+
+func (s *State) ParseFilterPairsQuery(query string) error {
+	filteredPairsQueryParsed, err := ast.ParseBody(query)
+	if err != nil {
+		return errors.Wrapf(err, "parse query %q", query)
+	}
+
+	if s.queries == nil {
+		s.queries = make(map[string]ast.Body)
+	}
+
+	s.queries[FilteredPairsQueryKey] = filteredPairsQueryParsed
+
+	return nil
+}
+
+func (s *State) ParseFilterProjectsQuery(query string) error {
+	filteredProjectsQueryParsed, err := ast.ParseBody(query)
+	if err != nil {
+		return errors.Wrapf(err, "parse query %q", query)
+	}
+
+	if s.queries == nil {
+		s.queries = make(map[string]ast.Body)
+	}
+
+	s.queries[FilteredProjectsQueryKey] = filteredProjectsQueryParsed
+
+	return nil
+}
+
+func (s *State) ProjectsAuthorized(
+	ctx context.Context,
+	subjects engine.Subjects,
+	action engine.Action,
+	resource engine.Resource,
+	projects engine.Projects,
+) (engine.Projects, error) {
 	var subs []*ast.Term
 	for _, sub := range subjects {
 		subs = append(subs, ast.NewTerm(ast.String(sub)))
@@ -103,13 +163,17 @@ func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects
 	return s.projectsFromPreparedEvalQuery(resultSet)
 }
 
-func (s *State) FilterAuthorizedPairs(ctx context.Context, subjects engine.Subjects, pairs engine.Pairs) (engine.Pairs, error) {
+func (s *State) FilterAuthorizedPairs(
+	ctx context.Context,
+	subjects engine.Subjects,
+	pairs engine.Pairs,
+) (engine.Pairs, error) {
 	opaInput := map[string]interface{}{
 		"subjects": subjects,
 		"pairs":    pairs,
 	}
 
-	rs, err := s.evalQuery(ctx, s.queries[filteredPairsQuery], opaInput, s.store)
+	rs, err := s.evalQuery(ctx, s.queries[FilteredPairsQueryKey], opaInput, s.store)
 	if err != nil {
 		return nil, &EvaluationError{e: err}
 	}
@@ -122,7 +186,7 @@ func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Su
 		"subjects": subjects,
 	}
 
-	rs, err := s.evalQuery(ctx, s.queries[filteredProjectsQuery], opaInput, s.store)
+	rs, err := s.evalQuery(ctx, s.queries[FilteredProjectsQueryKey], opaInput, s.store)
 	if err != nil {
 		return nil, &EvaluationError{e: err}
 	}
@@ -130,7 +194,13 @@ func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Su
 	return s.projectsFromPartialResults(rs)
 }
 
-func (s *State) IsAuthorized(ctx context.Context, subject engine.Subject, action engine.Action, resource engine.Resource, project engine.Project) (bool, error) {
+func (s *State) IsAuthorized(
+	ctx context.Context,
+	subject engine.Subject,
+	action engine.Action,
+	resource engine.Resource,
+	project engine.Project,
+) (bool, error) {
 	if len(project) > 0 {
 		input := ast.NewObject(
 			[2]*ast.Term{ast.NewTerm(ast.String("subjects")), ast.ArrayTerm(ast.NewTerm(ast.String(subject)))},
@@ -149,7 +219,7 @@ func (s *State) IsAuthorized(ctx context.Context, subject engine.Subject, action
 			"pairs":    engine.MakePairs(engine.Pair{Resource: resource, Action: action}),
 		}
 
-		rs, err := s.evalQuery(ctx, s.queries[filteredPairsQuery], opaInput, s.store)
+		rs, err := s.evalQuery(ctx, s.queries[FilteredPairsQueryKey], opaInput, s.store)
 		if err != nil {
 			return false, &EvaluationError{e: err}
 		}
@@ -256,7 +326,7 @@ func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
 	r := rego.New(
 		rego.Store(s.store),
 		rego.Compiler(compiler),
-		rego.ParsedQuery(s.queries[authzProjectsQuery]),
+		rego.ParsedQuery(s.queries[AuthzProjectsQueryKey]),
 		rego.DisableInlining([]string{
 			"data.authz.denied_project",
 		}),

@@ -38,7 +38,7 @@ const (
 	filteredProjectsQuery = "data.authz.introspection.authorized_project"
 )
 
-func New(_ context.Context, opts ...OptFunc) (*State, error) {
+func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	authzProjectsQueryParsed, err := ast.ParseBody(authzProjectsQuery)
 	if err != nil {
 		return nil, errors.Wrapf(err, "parse query %q", authzProjectsQuery)
@@ -72,6 +72,10 @@ func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	}
 
 	return &s, nil
+}
+
+func (s *State) Name() string {
+	return "opa"
 }
 
 func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {
@@ -283,6 +287,7 @@ func dumpData(ctx context.Context, store storage.Store) error {
 
 func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}, store storage.Store) (rego.ResultSet, error) {
 	var tracer *topdown.BufferTracer
+	tracer = topdown.NewBufferTracer()
 
 	rs, err := rego.New(
 		rego.ParsedQuery(query),
@@ -295,7 +300,7 @@ func (s *State) evalQuery(ctx context.Context, query ast.Body, input interface{}
 		return nil, err
 	}
 
-	if tracer.Enabled() {
+	if tracer != nil && tracer.Enabled() {
 		topdown.PrettyTrace(os.Stderr, *tracer) //nolint: govet // tracer can be nil only if tracer.Enabled() == false
 	}
 

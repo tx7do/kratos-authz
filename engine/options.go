@@ -1,12 +1,5 @@
 package engine
 
-type Type int
-
-const (
-	CasbinEngine Type = 1
-	OpaEngine    Type = 2
-)
-
 type Subject string
 type Subjects []Subject
 

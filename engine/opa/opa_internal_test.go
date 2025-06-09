@@ -42,7 +42,7 @@ var result ast.Value
 func BenchmarkFilterAuthorizedPairsRealWorldExample(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	pairs := engine.Pairs{
@@ -202,7 +202,7 @@ func BenchmarkAuthorizedProjectPreparedQueryWithIncreasingPolicies(b *testing.B)
 	var r error
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCounts := []int{0, 5, 10, 20, 50, 100, 200, 1000}
@@ -244,7 +244,7 @@ func BenchmarkAuthorizedProjectPreparedQueryWithIncreasingPolicies(b *testing.B)
 func BenchmarkProjectsAuthorizedWithIncreasingPolicies(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCounts := []int{0, 5, 10, 20, 50, 100, 200, 1000}
@@ -293,7 +293,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingPolicies(b *testing.B) {
 func BenchmarkFilterAuthorizedProjectsWithIncreasingPolicies(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCounts := []int{0, 5, 10, 20, 50, 100, 200, 1000}
@@ -340,7 +340,7 @@ func BenchmarkAuthorizedProjectPreparedQueryWithIncreasingRoles(b *testing.B) {
 	var r error
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCount := 20 // keep this constant while increasing roleCount
@@ -377,7 +377,7 @@ func BenchmarkAuthorizedProjectPreparedQueryWithIncreasingRoles(b *testing.B) {
 func BenchmarkProjectsAuthorizedWithIncreasingRoles(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCount := 20 // keep this constant while increasing roleCount
@@ -423,7 +423,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingRoles(b *testing.B) {
 func BenchmarkFilterAuthorizedProjectsWithIncreasingRoles(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCount := 20 // keep this constant while increasing roleCount
@@ -465,7 +465,7 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingRoles(b *testing.B) {
 func BenchmarkProjectsAuthorizedWithIncreasingProjects(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	projectCounts := []int{5, 20, 100, 200, 300}
@@ -514,7 +514,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingProjects(b *testing.B) {
 func BenchmarkFilterAuthorizedProjectsIncreasingProjects(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	projectCounts := []int{5, 20, 100, 200, 300}
@@ -558,7 +558,7 @@ func BenchmarkFilterAuthorizedProjectsIncreasingProjects(b *testing.B) {
 func BenchmarkProjectsAuthorizedWithIncreasingSubjects(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	// keep these values constant as we increase the number of subjects
@@ -611,7 +611,7 @@ func BenchmarkProjectsAuthorizedWithIncreasingSubjects(b *testing.B) {
 func BenchmarkFilterAuthorizedProjectsWithIncreasingSubjects(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	// keep these values constant as we increase the number of subjects
@@ -664,7 +664,7 @@ func BenchmarkFilterAuthorizedProjectsWithIncreasingSubjects(b *testing.B) {
 func BenchmarkAuthorizedProjectsIncreasingMembershipFrequency(b *testing.B) {
 	ctx := context.Background()
 
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	require.NoError(b, err, "init state")
 
 	policyCount := 10

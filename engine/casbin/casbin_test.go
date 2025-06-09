@@ -24,7 +24,7 @@ var (
 
 func TestFilterAuthorizedPairs(t *testing.T) {
 	ctx := context.Background()
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -99,7 +99,7 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 
 func TestFilterAuthorizedProjects(t *testing.T) {
 	ctx := context.Background()
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -157,7 +157,7 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 
 func TestProjectsAuthorized(t *testing.T) {
 	ctx := context.Background()
-	s, err := New(ctx)
+	s, err := NewEngine(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 

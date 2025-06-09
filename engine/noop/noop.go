@@ -9,6 +9,14 @@ var _ engine.Engine = (*State)(nil)
 
 type State struct{}
 
+func NewEngine(_ context.Context) (*State, error) {
+	return &State{}, nil
+}
+
+func (s State) Name() string {
+	return "noop"
+}
+
 func (s State) ProjectsAuthorized(_ context.Context, _ engine.Subjects, _ engine.Action, _ engine.Resource, _ engine.Projects) (engine.Projects, error) {
 	return engine.Projects{}, nil
 }

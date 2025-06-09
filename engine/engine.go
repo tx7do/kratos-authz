@@ -10,15 +10,17 @@ type Engine interface {
 }
 
 type Authorizer interface {
-	ProjectsAuthorized(context.Context, Subjects, Action, Resource, Projects) (Projects, error)
+	Name() string
 
-	FilterAuthorizedPairs(context.Context, Subjects, Pairs) (Pairs, error)
+	ProjectsAuthorized(ctx context.Context, subjects Subjects, action Action, resource Resource, projects Projects) (Projects, error)
 
-	FilterAuthorizedProjects(context.Context, Subjects) (Projects, error)
+	FilterAuthorizedPairs(ctx context.Context, subjects Subjects, pairs Pairs) (Pairs, error)
 
-	IsAuthorized(context.Context, Subject, Action, Resource, Project) (bool, error)
+	FilterAuthorizedProjects(ctx context.Context, subjects Subjects) (Projects, error)
+
+	IsAuthorized(ctx context.Context, subjects Subject, action Action, resource Resource, project Project) (bool, error)
 }
 
 type Writer interface {
-	SetPolicies(context.Context, PolicyMap, RoleMap) error
+	SetPolicies(ctx context.Context, policies PolicyMap, roles RoleMap) error
 }

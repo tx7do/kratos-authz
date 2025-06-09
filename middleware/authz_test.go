@@ -119,7 +119,7 @@ func TestServer_Casbin(t *testing.T) {
 
 			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: "ANY"})
 
-			e, err := casbin.New(ctx)
+			e, err := casbin.NewEngine(ctx)
 			assert.Nil(t, err)
 
 			err = e.SetPolicies(ctx, policies, nil)
@@ -238,7 +238,7 @@ func TestServer_CasbinWithDomain(t *testing.T) {
 
 			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: "ANY"})
 
-			e, err := casbin.New(ctx)
+			e, err := casbin.NewEngine(ctx)
 			assert.Nil(t, err)
 
 			err = e.SetPolicies(ctx, policies, nil)
@@ -323,7 +323,7 @@ func TestServer_OPA(t *testing.T) {
 
 			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: string(test.method)})
 
-			e, err := opa.New(ctx)
+			e, err := opa.NewEngine(ctx)
 			assert.Nil(t, err)
 
 			err = e.SetPolicies(ctx, policies, roles)
@@ -429,7 +429,7 @@ func TestServer_OPAWithDomain(t *testing.T) {
 
 			ctx := transport.NewServerContext(context.Background(), &myTransport{operation: string(test.path), method: string(test.method)})
 
-			e, err := opa.New(ctx)
+			e, err := opa.NewEngine(ctx)
 			assert.Nil(t, err)
 
 			err = e.SetPolicies(ctx, policies, roles)

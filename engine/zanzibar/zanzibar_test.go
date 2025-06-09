@@ -10,7 +10,7 @@ import (
 
 func TestOpenFga(t *testing.T) {
 	ctx := context.Background()
-	s, err := New(ctx, WithOpenFga("http", "127.0.0.1:8080", "", ""))
+	s, err := NewEngine(ctx, WithOpenFga("http", "127.0.0.1:8080", "", ""))
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -59,7 +59,7 @@ func TestOpenFga(t *testing.T) {
 
 func TestKeto(t *testing.T) {
 	ctx := context.Background()
-	s, err := New(ctx, WithKeto("127.0.0.1:4466", "127.0.0.1:4467", true))
+	s, err := NewEngine(ctx, WithKeto("127.0.0.1:4466", "127.0.0.1:4467", true))
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 

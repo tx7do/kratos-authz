@@ -21,7 +21,7 @@ type State struct {
 	authorizedProjectsMatcher string
 }
 
-func New(_ context.Context, opts ...OptFunc) (*State, error) {
+func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	s := State{
 		policy:                    newAdapter(),
 		projects:                  engine.Projects{},
@@ -48,6 +48,10 @@ func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	}
 
 	return &s, nil
+}
+
+func (s *State) Name() string {
+	return "casbin"
 }
 
 func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {

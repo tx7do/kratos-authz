@@ -637,7 +637,7 @@ func resultSet(t *testing.T,
 		t.Fatalf("OPA eval failed: %s", err)
 	}
 
-	if tracer.Enabled() {
+	if tracer != nil && tracer.Enabled() {
 		topdown.PrettyTrace(os.Stderr, *tracer)
 	}
 	return rs

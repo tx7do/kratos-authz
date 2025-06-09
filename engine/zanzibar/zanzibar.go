@@ -16,7 +16,7 @@ type State struct {
 	openfgaClient *openfga.Client
 }
 
-func New(_ context.Context, opts ...OptFunc) (*State, error) {
+func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	s := &State{}
 
 	for _, opt := range opts {
@@ -28,6 +28,10 @@ func New(_ context.Context, opts ...OptFunc) (*State, error) {
 	}
 
 	return s, nil
+}
+
+func (s *State) Name() string {
+	return "zanzibar"
 }
 
 func (s *State) ProjectsAuthorized(_ context.Context, _ engine.Subjects, _ engine.Action, _ engine.Resource, _ engine.Projects) (engine.Projects, error) {

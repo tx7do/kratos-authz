@@ -2,6 +2,7 @@ package casbin
 
 import (
 	_ "embed"
+	"github.com/tx7do/kratos-authz/engine"
 
 	"github.com/casbin/casbin/v2/model"
 )
@@ -47,5 +48,32 @@ func WithFileModel(path string) OptFunc {
 func WithPolicyAdapter(policy *Adapter) OptFunc {
 	return func(s *State) {
 		s.policy = policy
+	}
+}
+
+func WithPolices(policies map[string]interface{}) OptFunc {
+	return func(s *State) {
+		if s.policy == nil {
+			s.policy = newAdapter()
+		}
+		s.policy.SetPolicies(policies)
+	}
+}
+
+func WithProjects(projects engine.Projects) OptFunc {
+	return func(s *State) {
+		s.projects = projects
+	}
+}
+
+func WithWildcardItem(item string) OptFunc {
+	return func(s *State) {
+		s.wildcardItem = item
+	}
+}
+
+func WithAuthorizedProjectsMatcher(matcher string) OptFunc {
+	return func(s *State) {
+		s.authorizedProjectsMatcher = matcher
 	}
 }

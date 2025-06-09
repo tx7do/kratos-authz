@@ -3,7 +3,6 @@ package opa_test
 import (
 	"context"
 	"fmt"
-	"github.com/tx7do/kratos-authz/engine"
 	"io"
 	"os"
 	"strings"
@@ -21,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tx7do/kratos-authz/engine"
 	"github.com/tx7do/kratos-authz/engine/opa"
 )
 

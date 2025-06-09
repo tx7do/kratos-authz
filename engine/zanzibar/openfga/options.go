@@ -14,7 +14,7 @@ func WithApiUrl(apiUrl string) ClientOption {
 
 func WithStoreId(storeId string) ClientOption {
 	return func(c *Client) {
-		c.apiUrl = storeId
+		c.storeId = storeId
 	}
 }
 

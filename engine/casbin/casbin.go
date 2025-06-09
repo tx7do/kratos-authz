@@ -7,6 +7,7 @@ import (
 	"github.com/casbin/casbin/v2/model"
 
 	"github.com/tx7do/kratos-authz/engine"
+	"github.com/tx7do/kratos-authz/engine/casbin/assets"
 )
 
 var _ engine.Engine = (*State)(nil)
@@ -36,7 +37,7 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	var err error
 
 	if s.model == nil {
-		s.model, err = model.NewModelFromString(DefaultRestfullWithRoleModel)
+		s.model, err = model.NewModelFromString(assets.DefaultRestfullWithRoleModel)
 		if err != nil {
 			return nil, err
 		}

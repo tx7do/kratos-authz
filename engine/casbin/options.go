@@ -1,29 +1,11 @@
 package casbin
 
 import (
-	_ "embed"
-	"github.com/tx7do/kratos-authz/engine"
-
 	"github.com/casbin/casbin/v2/model"
+
+	"github.com/tx7do/kratos-authz/engine"
+	"github.com/tx7do/kratos-authz/engine/casbin/assets"
 )
-
-//go:embed model/rbac.conf
-var DefaultRbacModel string
-
-//go:embed model/rbac_with_domains.conf
-var DefaultRbacWithDomainModel string
-
-//go:embed model/abac.conf
-var DefaultAbacModel string
-
-//go:embed model/acl.conf
-var DefaultAclModel string
-
-//go:embed model/restfull.conf
-var DefaultRestfullModel string
-
-//go:embed model/restfull_with_role.conf
-var DefaultRestfullWithRoleModel string
 
 type OptFunc func(*State)
 
@@ -42,6 +24,33 @@ func WithStringModel(str string) OptFunc {
 func WithFileModel(path string) OptFunc {
 	return func(s *State) {
 		s.model, _ = model.NewModelFromFile(path)
+	}
+}
+
+func WithDefaultModel(name string) OptFunc {
+	return func(s *State) {
+		var str string
+		switch name {
+		case "rbac":
+			str = assets.DefaultRbacModel
+
+		case "rbac_with_domains":
+			str = assets.DefaultRbacWithDomainModel
+
+		case "abac":
+			str = assets.DefaultAbacModel
+
+		case "acl":
+			str = assets.DefaultAclModel
+
+		case "restfull":
+			str = assets.DefaultRestfullModel
+
+		case "restfull_with_role":
+			str = assets.DefaultRestfullWithRoleModel
+		}
+
+		s.model, _ = model.NewModelFromString(str)
 	}
 }
 

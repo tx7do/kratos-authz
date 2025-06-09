@@ -75,7 +75,7 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 }
 
 func (s *State) Name() string {
-	return "opa"
+	return string(engine.Opa)
 }
 
 func (s *State) ProjectsAuthorized(ctx context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {

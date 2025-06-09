@@ -31,7 +31,7 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 }
 
 func (s *State) Name() string {
-	return "zanzibar"
+	return string(engine.Zanzibar)
 }
 
 func (s *State) ProjectsAuthorized(_ context.Context, _ engine.Subjects, _ engine.Action, _ engine.Resource, _ engine.Projects) (engine.Projects, error) {

@@ -51,7 +51,7 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 }
 
 func (s *State) Name() string {
-	return "casbin"
+	return string(engine.Casbin)
 }
 
 func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, action engine.Action, resource engine.Resource, projects engine.Projects) (engine.Projects, error) {

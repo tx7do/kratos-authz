@@ -619,7 +619,7 @@ func resultSet(t *testing.T,
 	var tracer *topdown.BufferTracer
 	// ⓘ DEBUG note: to see what's happening during policy execution in OPA,
 	// uncomment the following line then execute some tests in this file.
-	// tracer = topdown.NewBufferTracer()
+	tracer = topdown.NewBufferTracer()
 
 	r := rego.New(
 		rego.Query(query),
@@ -654,7 +654,7 @@ func compiler(t *testing.T) *ast.Compiler {
 
 func compilerWithModules(t *testing.T, modules map[string]string) *ast.Compiler {
 	t.Helper()
-	compiler := ast.NewCompiler()
+	cpr := ast.NewCompiler()
 	parsedModules := map[string]*ast.Module{}
 
 	for name, path := range modules {
@@ -666,8 +666,8 @@ func compilerWithModules(t *testing.T, modules map[string]string) *ast.Compiler 
 		parsedModules[name] = parsed
 	}
 
-	compiler.Compile(parsedModules)
-	require.Falsef(t, compiler.Failed(), "compile policies: %s", compiler.Errors)
+	cpr.Compile(parsedModules)
+	require.Falsef(t, cpr.Failed(), "compile policies: %s", cpr.Errors)
 
-	return compiler
+	return cpr
 }

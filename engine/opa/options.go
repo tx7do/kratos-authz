@@ -11,3 +11,15 @@ func WithModules(mods map[string]*ast.Module) OptFunc {
 		s.modules = mods
 	}
 }
+
+func WithModulesFromFiles(modules map[string]string) OptFunc {
+	return func(s *State) {
+		_ = s.InitModulesFromFiles(modules)
+	}
+}
+
+func WithModulesFromString(modules map[string]string) OptFunc {
+	return func(s *State) {
+		_ = s.InitModulesFromString(modules)
+	}
+}

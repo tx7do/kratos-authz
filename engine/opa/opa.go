@@ -67,7 +67,7 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 		opt(&s)
 	}
 
-	if err := s.initModules(); err != nil {
+	if err = s.initModules(); err != nil {
 		return nil, errors.Wrap(err, "init OPA modules")
 	}
 
@@ -167,27 +167,83 @@ func (s *State) SetPolicies(ctx context.Context, policyMap engine.PolicyMap, rol
 	return s.makeAuthorizedProjectPreparedQuery(ctx)
 }
 
-func (s *State) initModules() error {
-	if len(s.modules) == 0 {
-		mods := map[string]*ast.Module{}
-		for _, name := range AssetNames() {
-			if !strings.HasSuffix(name, ".rego") {
-				continue
-			}
-			parsed, err := ast.ParseModule(name, string(MustAsset(name)))
-			if err != nil {
-				return errors.Wrapf(err, "parse policy file %q", name)
-			}
-			mods[name] = parsed
+func (s *State) InitModulesFromFiles(modules map[string]string) error {
+	parsedModules := map[string]*ast.Module{}
+	for name, path := range modules {
+		moduleData, err := os.ReadFile(path)
+		if err != nil {
+			return errors.Wrapf(err, "read module file %q", path)
 		}
-		s.modules = mods
+
+		parsed, err := ast.ParseModule(name, string(moduleData))
+		if err != nil {
+			return errors.Wrapf(err, "parse module %q", name)
+		}
+
+		parsedModules[name] = parsed
 	}
 
+	s.modules = parsedModules
+
+	return nil
+}
+
+func (s *State) InitModulesFromString(modules map[string]string) error {
+	parsedModules := map[string]*ast.Module{}
+	for name, moduleData := range modules {
+		parsed, err := ast.ParseModule(name, moduleData)
+		if err != nil {
+			return errors.Wrapf(err, "parse module %q", name)
+		}
+
+		parsedModules[name] = parsed
+	}
+
+	s.modules = parsedModules
+
+	return nil
+}
+
+func (s *State) InitModulesFromAssets() error {
+	mods := map[string]*ast.Module{}
+	for _, name := range AssetNames() {
+		if !strings.HasSuffix(name, ".rego") {
+			continue
+		}
+		parsed, err := ast.ParseModule(name, string(MustAsset(name)))
+		if err != nil {
+			return errors.Wrapf(err, "parse policy file %q", name)
+		}
+		mods[name] = parsed
+	}
+
+	s.modules = mods
+
+	return nil
+}
+
+func (s *State) doCompile() error {
 	compiler, err := s.newCompiler()
 	if err != nil {
 		return errors.Wrap(err, "init compiler")
 	}
+
 	s.compiler = compiler
+
+	return nil
+}
+
+func (s *State) initModules() error {
+	if len(s.modules) == 0 {
+		if err := s.InitModulesFromAssets(); err != nil {
+			return errors.Wrap(err, "init modules from assets")
+		}
+	}
+
+	if err := s.doCompile(); err != nil {
+		return errors.Wrap(err, "init compiler")
+	}
+
 	return nil
 }
 

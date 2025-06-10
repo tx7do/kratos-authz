@@ -2,6 +2,7 @@ package casbin
 
 import (
 	"github.com/casbin/casbin/v2/model"
+	"github.com/go-kratos/kratos/v2/log"
 
 	"github.com/tx7do/kratos-authz/engine"
 	"github.com/tx7do/kratos-authz/engine/casbin/assets"
@@ -84,5 +85,11 @@ func WithWildcardItem(item string) OptFunc {
 func WithAuthorizedProjectsMatcher(matcher string) OptFunc {
 	return func(s *State) {
 		s.authorizedProjectsMatcher = matcher
+	}
+}
+
+func WithLogger(logger log.Logger) OptFunc {
+	return func(s *State) {
+		s.log = log.NewHelper(log.With(logger, "module", "casbin.authz.engine"))
 	}
 }

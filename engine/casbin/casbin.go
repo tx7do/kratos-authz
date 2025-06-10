@@ -3,6 +3,8 @@ package casbin
 import (
 	"context"
 
+	"github.com/go-kratos/kratos/v2/log"
+
 	stdCasbin "github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 
@@ -16,22 +18,33 @@ type State struct {
 	model    model.Model
 	policy   *Adapter
 	enforcer *stdCasbin.SyncedEnforcer
-	projects engine.Projects
 
+	projects                  engine.Projects
 	wildcardItem              string
 	authorizedProjectsMatcher string
+
+	log *log.Helper
 }
 
 func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	s := State{
+		log:                       log.NewHelper(log.With(log.DefaultLogger, "module", "casbin.authz.engine")),
 		policy:                    newAdapter(),
 		projects:                  engine.Projects{},
-		wildcardItem:              "*",
-		authorizedProjectsMatcher: "g(r.sub, p.sub, p.dom) && (keyMatch(r.dom, p.dom) || p.dom == '*')",
+		wildcardItem:              DefaultWildcardItem,
+		authorizedProjectsMatcher: DefaultAuthorizedProjectsMatcher,
 	}
 
+	if err := s.init(opts...); err != nil {
+		return nil, err
+	}
+
+	return &s, nil
+}
+
+func (s *State) init(opts ...OptFunc) error {
 	for _, opt := range opts {
-		opt(&s)
+		opt(s)
 	}
 
 	var err error
@@ -39,16 +52,18 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	if s.model == nil {
 		s.model, err = model.NewModelFromString(assets.DefaultRestfullWithRoleModel)
 		if err != nil {
-			return nil, err
+			s.log.Errorf("failed to create casbin model: %v", err)
+			return err
 		}
 	}
 
 	s.enforcer, err = stdCasbin.NewSyncedEnforcer(s.model, s.policy)
 	if err != nil {
-		return nil, err
+		s.log.Errorf("failed to create casbin enforcer: %v", err)
+		return err
 	}
 
-	return &s, nil
+	return nil
 }
 
 func (s *State) Name() string {
@@ -63,7 +78,7 @@ func (s *State) ProjectsAuthorized(_ context.Context, subjects engine.Subjects, 
 	for _, project := range projects {
 		for _, subject := range subjects {
 			if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
-				//fmt.Println(allowed, err)
+				s.log.Errorf("failed to enforce policy for projects: %v", err)
 				return nil, err
 			} else if allowed {
 				result = append(result, project)
@@ -84,7 +99,7 @@ func (s *State) FilterAuthorizedPairs(_ context.Context, subjects engine.Subject
 	for _, p := range pairs {
 		for _, subject := range subjects {
 			if allowed, err = s.enforcer.Enforce(string(subject), string(p.Resource), string(p.Action), string(project)); err != nil {
-				//fmt.Println(allowed, err)
+				s.log.Errorf("failed to enforce policy for pair: %v", err)
 				return nil, err
 			} else if allowed {
 				result = append(result, p)
@@ -105,7 +120,7 @@ func (s *State) FilterAuthorizedProjects(_ context.Context, subjects engine.Subj
 	for _, project := range s.projects {
 		for _, subject := range subjects {
 			if allowed, err = s.enforcer.EnforceWithMatcher(s.authorizedProjectsMatcher, string(subject), string(resource), string(action), string(project)); err != nil {
-				//fmt.Println(allowed, err)
+				s.log.Errorf("failed to enforce policy with matcher: %v", err)
 				return nil, err
 			} else if allowed {
 				result = append(result, project)
@@ -124,7 +139,7 @@ func (s *State) IsAuthorized(_ context.Context, subject engine.Subject, action e
 	var err error
 	var allowed bool
 	if allowed, err = s.enforcer.Enforce(string(subject), string(resource), string(action), string(project)); err != nil {
-		//fmt.Println(allowed, err)
+		s.log.Errorf("failed to enforce policy: %v", err)
 		return false, err
 	} else if allowed {
 		return true, nil
@@ -134,7 +149,12 @@ func (s *State) IsAuthorized(_ context.Context, subject engine.Subject, action e
 
 func (s *State) SetPolicies(_ context.Context, policyMap engine.PolicyMap, _ engine.RoleMap) error {
 	s.policy.SetPolicies(policyMap)
-	err := s.enforcer.LoadPolicy()
+
+	if err := s.enforcer.LoadPolicy(); err != nil {
+		s.log.Errorf("failed to load policy: %v", err)
+		return err
+	}
+
 	//fmt.Println(err, s.enforcer.GetAllSubjects(), s.enforcer.GetAllRoles())
 
 	projects, ok := policyMap["projects"]
@@ -145,5 +165,5 @@ func (s *State) SetPolicies(_ context.Context, policyMap engine.PolicyMap, _ eng
 		}
 	}
 
-	return err
+	return nil
 }

@@ -8,7 +8,7 @@ require (
 	github.com/casbin/casbin/v2 v2.121.0
 	github.com/go-kratos/kratos/v2 v2.8.4
 	github.com/stretchr/testify v1.11.1
-	github.com/tx7do/kratos-authz v1.1.5
+	github.com/tx7do/kratos-authz v1.1.6
 )
 
 require (

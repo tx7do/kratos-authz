@@ -3,13 +3,13 @@ echo off
 ::指定起始文件夹
 set DIR="%cd%\..\engine"
 
-for /R %DIR% /d %%i in (*) do (
+for /d %%i in ("%DIR%\*") do (
     echo %%i
-    cd %%i
+    pushd "%%i"
     go get all
     go mod tidy
+    popd
 )
-
 
 cd ..\..\..\middleware\
 go get all

@@ -11,6 +11,6 @@ for /d %%i in ("%DIR%\*") do (
     popd
 )
 
-cd ..\..\..\middleware\
+cd %cd%\..\middleware\
 go get all
 go mod tidy

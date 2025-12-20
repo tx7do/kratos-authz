@@ -9,6 +9,21 @@ import (
 	"github.com/tx7do/kratos-authz/engine/zanzibar/openfga"
 )
 
+func init() {
+	_ = engine.Register(engine.Zanzibar, func(ctx context.Context, options ...any) (engine.Engine, error) {
+		var opts []OptFunc
+		if len(options) > 0 {
+			for _, o := range options {
+				if opt, ok := o.(OptFunc); ok {
+					opts = append(opts, opt)
+				}
+			}
+		}
+
+		return NewEngine(ctx, opts...)
+	})
+}
+
 var _ engine.Engine = (*State)(nil)
 
 type State struct {

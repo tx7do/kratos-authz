@@ -2,8 +2,15 @@ package noop
 
 import (
 	"context"
+
 	"github.com/tx7do/kratos-authz/engine"
 )
+
+func init() {
+	_ = engine.Register(engine.Noop, func(ctx context.Context, options ...any) (engine.Engine, error) {
+		return NewEngine(ctx)
+	})
+}
 
 var _ engine.Engine = (*State)(nil)
 

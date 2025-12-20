@@ -2,13 +2,11 @@ module github.com/tx7do/kratos-authz/middleware
 
 go 1.24.6
 
-replace (
-	github.com/tx7do/kratos-authz => ../
-)
+replace github.com/tx7do/kratos-authz => ../
 
 require (
 	github.com/go-kratos/kratos/v2 v2.9.2
-	github.com/tx7do/kratos-authz v1.1.6
+	github.com/tx7do/kratos-authz v1.1.7
 )
 
 require (

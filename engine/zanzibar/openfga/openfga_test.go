@@ -1,7 +1,6 @@
 package openfga
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -9,19 +8,18 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	ctx := context.Background()
 	cli := NewClient(
 		WithApiUrl("127.0.0.1:8080"),
 		WithToken(""),
 	)
 	assert.NotNil(t, cli)
 
-	stores, err := cli.ListStore(ctx)
+	stores, err := cli.ListStore(t.Context())
 	assert.Nil(t, err)
 	if stores == nil || len(*stores) == 0 {
 		_uuid := uuid.New()
 		storeName := _uuid.String()
-		err := cli.CreateStore(ctx, storeName)
+		err := cli.CreateStore(t.Context(), storeName)
 		assert.Nil(t, err)
 	} else {
 		for _, store := range *stores {
@@ -29,26 +27,24 @@ func TestClient(t *testing.T) {
 		}
 
 		_ = cli.SetStoreId((*stores)[len(*stores)-1].GetId())
-		//_ = cli.DeleteStore(ctx)
+		//_ = cli.DeleteStore(t.Context())
 	}
 
 	model := "{\"type_definitions\":[{\"type\":\"document\",\"relations\":{\"reader\":{\"this\":{}},\"writer\":{\"this\":{}},\"owner\":{\"this\":{}}}}]}"
-	id, err := cli.CreateAuthorizationModel(ctx, model)
+	id, err := cli.CreateAuthorizationModel(t.Context(), model)
 	assert.Nil(t, err)
 	t.Logf("model id: %s", id)
 
-	err = cli.CreateRelationTuple(ctx, "document:Z", "reader", "user:anne")
+	err = cli.CreateRelationTuple(t.Context(), "document:Z", "reader", "user:anne")
 	assert.Nil(t, err)
 
 	doTestData(t, cli)
 
-	//err = cli.DeleteRelationTuple(ctx, "document:Z", "reader", "user:anne")
+	//err = cli.DeleteRelationTuple(t.Context(), "document:Z", "reader", "user:anne")
 	//assert.Nil(t, err)
 }
 
 func doTestData(t *testing.T, cli *Client) {
-	ctx := context.Background()
-
 	testDatas := []struct {
 		object   string
 		relation string
@@ -82,7 +78,7 @@ func doTestData(t *testing.T, cli *Client) {
 	}
 	for _, test := range testDatas {
 		t.Run(test.object, func(t *testing.T) {
-			allowed, err := cli.GetCheck(ctx, test.object, test.relation, test.subject)
+			allowed, err := cli.GetCheck(t.Context(), test.object, test.relation, test.subject)
 			assert.Nil(t, err)
 			assert.Equal(t, test.allowed, allowed)
 		})

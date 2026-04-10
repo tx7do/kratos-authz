@@ -1,7 +1,6 @@
 package casbin
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -23,8 +22,7 @@ var (
 )
 
 func TestFilterAuthorizedPairs(t *testing.T) {
-	ctx := context.Background()
-	s, err := NewEngine(ctx)
+	s, err := NewEngine(t.Context())
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -38,7 +36,7 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 		"projects": engine.MakeProjects(),
 	}
 
-	err = s.SetPolicies(ctx, policies, nil)
+	err = s.SetPolicies(t.Context(), policies, nil)
 	assert.Nil(t, err)
 
 	tests := []struct {
@@ -89,7 +87,7 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 		t.Run(test.authorityId, func(t *testing.T) {
 			subjects := engine.MakeSubjects(engine.Subject(test.authorityId))
 			pairs := engine.MakePairs(engine.MakePair(test.path, test.action))
-			r, err := s.FilterAuthorizedPairs(ctx, subjects, pairs)
+			r, err := s.FilterAuthorizedPairs(t.Context(), subjects, pairs)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)
@@ -98,8 +96,7 @@ func TestFilterAuthorizedPairs(t *testing.T) {
 }
 
 func TestFilterAuthorizedProjects(t *testing.T) {
-	ctx := context.Background()
-	s, err := NewEngine(ctx)
+	s, err := NewEngine(t.Context())
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -114,12 +111,12 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 		"projects": allProjects,
 	}
 
-	err = s.SetPolicies(ctx, policies, nil)
+	err = s.SetPolicies(t.Context(), policies, nil)
 	assert.Nil(t, err)
 
 	subjects := engine.Subjects{"bobo"}
 
-	r, err := s.FilterAuthorizedProjects(ctx, subjects)
+	r, err := s.FilterAuthorizedProjects(t.Context(), subjects)
 	assert.Nil(t, err)
 	fmt.Println(r)
 
@@ -147,7 +144,7 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.subjects[0]), func(t *testing.T) {
-			r, err := s.FilterAuthorizedProjects(ctx, test.subjects)
+			r, err := s.FilterAuthorizedProjects(t.Context(), test.subjects)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)
@@ -156,8 +153,7 @@ func TestFilterAuthorizedProjects(t *testing.T) {
 }
 
 func TestProjectsAuthorized(t *testing.T) {
-	ctx := context.Background()
-	s, err := NewEngine(ctx)
+	s, err := NewEngine(t.Context())
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -178,14 +174,14 @@ func TestProjectsAuthorized(t *testing.T) {
 		"projects": allProjects,
 	}
 
-	err = s.SetPolicies(ctx, policies, nil)
+	err = s.SetPolicies(t.Context(), policies, nil)
 	assert.Nil(t, err)
 
 	subjects := engine.Subjects{"bobo"}
 	action := engine.Action("GET")
 	resource := engine.Resource("/api/users")
 	projects := engine.Projects{"project1"}
-	r, err := s.ProjectsAuthorized(ctx, subjects, action, resource, projects)
+	r, err := s.ProjectsAuthorized(t.Context(), subjects, action, resource, projects)
 	assert.Nil(t, err)
 	fmt.Println(r)
 
@@ -298,7 +294,7 @@ func TestProjectsAuthorized(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.subjects[0]), func(t *testing.T) {
-			r, err := s.ProjectsAuthorized(ctx, test.subjects, test.action, test.resource, test.projects)
+			r, err := s.ProjectsAuthorized(t.Context(), test.subjects, test.action, test.resource, test.projects)
 			assert.Nil(t, err)
 			assert.EqualValues(t, test.equal, r)
 			//fmt.Println(r, err)

@@ -1,7 +1,6 @@
 package zanzibar
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,8 +8,18 @@ import (
 )
 
 func TestOpenFga(t *testing.T) {
-	ctx := context.Background()
-	s, err := NewEngine(ctx, WithOpenFga("http", "127.0.0.1:8080", "", ""))
+	// Fix: WithOpenFga expects (string, string, *string, *string, *string, *string, *string)
+	var token *string = nil
+	var clientId *string = nil
+	var clientSecret *string = nil
+	var apiAudience *string = nil
+	var apiTokenIssuer *string = nil
+	s, err := NewEngine(t.Context(), WithOpenFga(
+		"http", "127.0.0.1:8080",
+		token,
+		clientId, clientSecret,
+		apiAudience, apiTokenIssuer,
+	))
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -49,7 +58,7 @@ func TestOpenFga(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.subject), func(t *testing.T) {
-			allowed, err := s.IsAuthorized(ctx, test.subject, test.action, test.resource, test.project)
+			allowed, err := s.IsAuthorized(t.Context(), test.subject, test.action, test.resource, test.project)
 			assert.Nil(t, err)
 			assert.Equal(t, test.allowed, allowed)
 			//fmt.Println(r, err)
@@ -58,8 +67,11 @@ func TestOpenFga(t *testing.T) {
 }
 
 func TestKeto(t *testing.T) {
-	ctx := context.Background()
-	s, err := NewEngine(ctx, WithKeto("127.0.0.1:4466", "127.0.0.1:4467", true))
+	s, err := NewEngine(t.Context(), WithKeto(
+		"127.0.0.1:4466",
+		"127.0.0.1:4467",
+		true,
+	))
 	assert.Nil(t, err)
 	assert.NotNil(t, s)
 
@@ -95,7 +107,7 @@ func TestKeto(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.subject), func(t *testing.T) {
-			allowed, err := s.IsAuthorized(ctx, test.subject, test.action, test.resource, test.project)
+			allowed, err := s.IsAuthorized(t.Context(), test.subject, test.action, test.resource, test.project)
 			assert.Nil(t, err)
 			assert.Equal(t, test.allowed, allowed)
 			//fmt.Println(r, err)

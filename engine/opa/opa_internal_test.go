@@ -40,9 +40,7 @@ var errResult error
 var result ast.Value
 
 func BenchmarkFilterAuthorizedPairsRealWorldExample(b *testing.B) {
-	ctx := context.Background()
-
-	s, err := NewEngine(ctx)
+	s, err := NewEngine(b.Context())
 	require.NoError(b, err, "init state")
 
 	pairs := engine.Pairs{
@@ -130,7 +128,7 @@ func BenchmarkFilterAuthorizedPairsRealWorldExample(b *testing.B) {
 			var err error
 			for n := 0; n < b.N; n++ {
 				subject := append(engine.MakeSubjects("user:local:test@example.com"), randomTeams(count)...)
-				resp, err = s.FilterAuthorizedPairs(ctx, subject, pairs)
+				resp, err = s.FilterAuthorizedPairs(b.Context(), subject, pairs)
 				if err != nil {
 					b.Error(err)
 				}

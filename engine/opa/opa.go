@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/pkg/errors"
@@ -40,12 +41,20 @@ func init() {
 
 var _ engine.Engine = (*State)(nil)
 
-type State struct {
+// authzSnapshot is the immutable product of one SetPolicies call. The store
+// and its prepared projects query are used strictly as a pair, so they are
+// published together and swapped atomically: readers always observe a
+// consistent snapshot and never share mutable state with a reload.
+type authzSnapshot struct {
 	store                storage.Store
-	queries              map[string]ast.Body
-	compiler             *ast.Compiler
-	modules              map[string]*ast.Module
-	preparedEvalProjects rego.PreparedEvalQuery
+	preparedEvalProjects *rego.PreparedEvalQuery
+}
+
+type State struct {
+	snap     atomic.Pointer[authzSnapshot]
+	queries  map[string]ast.Body
+	compiler *ast.Compiler
+	modules  map[string]*ast.Module
 
 	regoVersion       ast.RegoVersion
 	enableQueryTracer bool
@@ -59,7 +68,6 @@ type State struct {
 
 func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	s := State{
-		store:                 inmem.New(),
 		queries:               make(map[string]ast.Body),
 		log:                   log.NewHelper(log.With(log.DefaultLogger, "module", "opa.authz.engine")),
 		regoVersion:           ast.DefaultRegoVersion,
@@ -72,6 +80,8 @@ func NewEngine(_ context.Context, opts ...OptFunc) (*State, error) {
 	if err := s.init(opts...); err != nil {
 		return nil, err
 	}
+
+	s.snap.Store(&authzSnapshot{store: inmem.New()})
 
 	return &s, nil
 }
@@ -187,7 +197,13 @@ func (s *State) ProjectsAuthorized(
 		[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(action))},
 		[2]*ast.Term{ast.NewTerm(ast.String("projects")), ast.ArrayTerm(projs...)},
 	)
-	resultSet, err := s.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
+
+	snap := s.snap.Load()
+	if snap == nil || snap.preparedEvalProjects == nil {
+		return engine.Projects{}, &EvaluationError{e: errors.New("authorized projects query not prepared; call SetPolicies first")}
+	}
+
+	resultSet, err := snap.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
 	if err != nil {
 		s.log.Errorf("failed to evaluate projects query: %v", err)
 		return engine.Projects{}, &EvaluationError{e: err}
@@ -206,7 +222,7 @@ func (s *State) FilterAuthorizedPairs(
 		"pairs":    pairs,
 	}
 
-	rs, err := s.evalQuery(ctx, s.queries[FilteredPairsQueryKey], opaInput, s.store)
+	rs, err := s.evalQuery(ctx, s.queries[FilteredPairsQueryKey], opaInput, s.snap.Load().store)
 	if err != nil {
 		s.log.Errorf("failed to evaluate filtered pairs query: %v", err)
 		return nil, &EvaluationError{e: err}
@@ -220,7 +236,7 @@ func (s *State) FilterAuthorizedProjects(ctx context.Context, subjects engine.Su
 		"subjects": subjects,
 	}
 
-	rs, err := s.evalQuery(ctx, s.queries[FilteredProjectsQueryKey], opaInput, s.store)
+	rs, err := s.evalQuery(ctx, s.queries[FilteredProjectsQueryKey], opaInput, s.snap.Load().store)
 	if err != nil {
 		s.log.Errorf("failed to evaluate filtered projects query: %v", err)
 		return nil, &EvaluationError{e: err}
@@ -236,14 +252,18 @@ func (s *State) IsAuthorized(
 	resource engine.Resource,
 	project engine.Project,
 ) (bool, error) {
+	snap := s.snap.Load()
 	if len(project) > 0 {
+		if snap == nil || snap.preparedEvalProjects == nil {
+			return false, &EvaluationError{e: errors.New("authorized projects query not prepared; call SetPolicies first")}
+		}
 		input := ast.NewObject(
 			[2]*ast.Term{ast.NewTerm(ast.String("subjects")), ast.ArrayTerm(ast.NewTerm(ast.String(subject)))},
 			[2]*ast.Term{ast.NewTerm(ast.String("resource")), ast.NewTerm(ast.String(resource))},
 			[2]*ast.Term{ast.NewTerm(ast.String("action")), ast.NewTerm(ast.String(action))},
 			[2]*ast.Term{ast.NewTerm(ast.String("projects")), ast.ArrayTerm(ast.NewTerm(ast.String(project)))},
 		)
-		resultSet, err := s.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
+		resultSet, err := snap.preparedEvalProjects.Eval(ctx, rego.EvalParsedInput(input))
 		if err != nil {
 			s.log.Errorf("failed to evaluate projects query: %v", err)
 			return false, &EvaluationError{e: err}
@@ -255,7 +275,7 @@ func (s *State) IsAuthorized(
 			"pairs":    engine.MakePairs(engine.Pair{Resource: resource, Action: action}),
 		}
 
-		rs, err := s.evalQuery(ctx, s.queries[FilteredPairsQueryKey], opaInput, s.store)
+		rs, err := s.evalQuery(ctx, s.queries[FilteredPairsQueryKey], opaInput, snap.store)
 		if err != nil {
 			s.log.Errorf("failed to evaluate filtered pairs query: %v", err)
 			return false, &EvaluationError{e: err}
@@ -266,12 +286,24 @@ func (s *State) IsAuthorized(
 }
 
 func (s *State) SetPolicies(ctx context.Context, policyMap engine.PolicyMap, roleMap engine.RoleMap) error {
-	s.store = inmem.NewFromObject(map[string]interface{}{
+	return s.publishPolicies(ctx, inmem.NewFromObject(map[string]interface{}{
 		"policies": policyMap,
 		"roles":    roleMap,
-	})
+	}))
+}
 
-	return s.makeAuthorizedProjectPreparedQuery(ctx)
+// publishPolicies builds the authorized-projects prepared query against the
+// given store, then publishes store and query together as the new snapshot.
+// On a build failure the previous snapshot stays active (fail-safe).
+func (s *State) publishPolicies(ctx context.Context, store storage.Store) error {
+	pq, err := s.makeAuthorizedProjectPreparedQuery(ctx, store)
+	if err != nil {
+		return err
+	}
+
+	s.snap.Store(&authzSnapshot{store: store, preparedEvalProjects: pq})
+
+	return nil
 }
 
 func (s *State) InitModulesFromFiles(modules map[string]string) error {
@@ -374,15 +406,15 @@ func (s *State) initModules() error {
 	return nil
 }
 
-func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
+func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context, store storage.Store) (*rego.PreparedEvalQuery, error) {
 	compiler, err := s.newCompiler()
 	if err != nil {
 		s.log.Errorf("failed to create compiler: %v", err)
-		return err
+		return nil, err
 	}
 
 	r := rego.New(
-		rego.Store(s.store),
+		rego.Store(store),
 		rego.Compiler(compiler),
 		rego.ParsedQuery(s.queries[AuthzProjectsQueryKey]),
 		rego.DisableInlining([]string{
@@ -394,7 +426,7 @@ func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
 	pq, err := r.Partial(ctx)
 	if err != nil {
 		s.log.Errorf("failed to create partial query for authorized projects: %v", err)
-		return err
+		return nil, err
 	}
 
 	for i, module := range pq.Support {
@@ -420,11 +452,11 @@ func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
 
 	if compiler.Failed() {
 		s.log.Errorf("failed to compile authorized projects: %v", compiler.Errors)
-		return compiler.Errors
+		return nil, compiler.Errors
 	}
 
 	r2 := rego.New(
-		rego.Store(s.store),
+		rego.Store(store),
 		rego.Compiler(compiler),
 		rego.Query("data.__partialauthz.authorized_project[project]"),
 		rego.SetRegoVersion(s.regoVersion),
@@ -433,12 +465,10 @@ func (s *State) makeAuthorizedProjectPreparedQuery(ctx context.Context) error {
 	query, err := r2.PrepareForEval(ctx)
 	if err != nil {
 		s.log.Errorf("failed to prepare for eval: %v", err)
-		return errors.Wrap(err, "prepare query for eval (authorized_project)")
+		return nil, errors.Wrap(err, "prepare query for eval (authorized_project)")
 	}
 
-	s.preparedEvalProjects = query
-
-	return nil
+	return &query, nil
 }
 
 func (s *State) newCompiler() (*ast.Compiler, error) {
@@ -453,7 +483,11 @@ func (s *State) newCompiler() (*ast.Compiler, error) {
 }
 
 func (s *State) DumpData(ctx context.Context) error {
-	return s.dumpData(ctx, s.store)
+	snap := s.snap.Load()
+	if snap == nil {
+		return nil
+	}
+	return s.dumpData(ctx, snap.store)
 }
 
 func (s *State) dumpData(ctx context.Context, store storage.Store) error {
